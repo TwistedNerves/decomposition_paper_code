@@ -6,8 +6,8 @@ import pickle
 from instance_mcnf import generate_instance
 
 
-nb_repetitions = 10
-nb_unique_exp = 3
+nb_repetitions = 10 # number of instances with the same parameters
+nb_unique_exp = 3 # number of different types of instances
 
 # Size of the graph : controls the number of nodes and arcs
 # size_list = [50, 70, 90, 115, 145]
@@ -32,7 +32,7 @@ assert len(size_list) == nb_unique_exp
 assert len(capacity_list) == nb_unique_exp
 assert len(max_demand_list) == nb_unique_exp
 
-# Choose here the type of graph to be created: note that the size parameter does not have the same meaning for both types
+# Select the type of graph to create: note that grid graphs and random connected graphs dont use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
 instance_parameter_list = []
 for size, capacity, max_demand in zip(size_list, capacity_list, max_demand_list):
     # instance_parameter_list.append(("grid", (size, size, size, 2*size, capacity, capacity), {"max_demand" : max_demand, "smaller_commodities" : False}))

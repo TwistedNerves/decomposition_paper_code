@@ -1,4 +1,4 @@
-# decomposition_paper_code
+# Introduction
 
 This repository is the code base of the paper "On the integration of Dantzig-Wolfe and Fenchel decompositions via directional normalizations"
 It is not made to be understandable without reading the paper first.
@@ -7,11 +7,11 @@ To run the code you will need Python 3 with common libraries (matplotlib, numpy.
 
 
 
-Content of the files
+# Content of the files
 
-knapsacksolver : copy of fontanf's repository in case it is not available anymore
+**instance_files_decomposition** : folder containing all the datasets of unsplittable flow instances used in the experiments of the paper, also contains the result_files obtained by applying the decomposition methods on the datasets.
 
-instance_files_decomposition.py : folder containing all the datasets of unsplittable flow instances used in the experiments of the paper, also contains the result_files obtained by applying the decomposition methods on the datasets.
+**knapsacksolver** : copy of fontanf's repository in case it is not available anymore
 
 instance_mcnf.py : contains all the function to create instances of the unsplittable flow problem
 
@@ -25,8 +25,22 @@ mcnf_do_test.py : can be used to quicly test the decomposition methods, can crea
 
 k_shortest_path.py : implementation of a k-shortest path algorithm. Used to compute allowed paths for each commodity of the unsplittable flow problem (so that no column generation is required to solve the path formulation (see paper for details)
 
-launch_dataset_test_decomposition : code used to launch the resolution of the unsplittable flow datasets by the decomposition methods, uses multiprocessing, stores the results in the folder of the dataset
+launch_dataset_test_decomposition.py : code used to launch the resolution of the unsplittable flow datasets by the decomposition methods, uses multiprocessing, stores the results in the folder of the dataset
 
 plot_results_decompostion.py : code used to analyse the results created by launching launch_dataset_test_decomposition and plots the results as shown in the paper
 
 knapsacksolver.so : result of the compilation of the C++ library for the knapsack solver. This library needs to be compiled with Bazel (see fontanf's repository) this result files should be copied at the root file of the decomposition_paper_code folder.
+
+# Basic usage
+
+## Try an algorithm
+
+Go at the top of mcnf_do_test.py, change the parameters of the created instance and choose the algorithms to test, execute python3 mcnf_do_test.py in the repository folder.
+
+## Create a dataset
+
+Go at the top of create_and_store_instances_decomposition.py, change the parameters of the created instance, change the value of the variable global_path to match the location of the repository, execute python3 create_and_store_instances_decomposition.py in the repository folder.
+
+## Execute the algorithms on a dataset
+
+Go at the bottom of launch_dataset_test_decomposition.py, select the datasets and the algorithms tested, change the value of the variable global_path to match the location of the repository, execute python3 launch_dataset_test_decomposition.py in the repository folder.
