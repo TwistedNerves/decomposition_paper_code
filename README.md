@@ -27,7 +27,7 @@ An example of how to launch the algorithms on a dataset is given in example_laun
 
 **src** : contains all the source code of the project
 
-plot_results_decompostion.py : code used to analyse the results created by launching launch_dataset_test_decomposition and plots the results as shown in the paper
+plot_results_decompostion.py : code used to analyse the results of the algorithms on the datasets and make the plots shown in the paper
 
 
 ## Content of **src**
