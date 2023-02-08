@@ -42,5 +42,5 @@ knapsack_oracles.py : contains algorithms that implement both optimization oracl
 
 k_shortest_path.py : implementation of a k-shortest path algorithm. Used to compute allowed paths for each commodity of the unsplittable flow problem (so that no column generation is required to solve the path formulation (see paper for details)
 
-knapsacksolver.so : result of the compilation of the C++ library for the knapsack solver. This library needs to be compiled with Bazel (see fontanf's repository) this result files should be copied at the root file of the decomposition_paper_code folder.
+knapsacksolver.so : result of the compilation of the C++ library for the knapsack solver. This library needs to be compiled with Bazel (see fontanf's repository) this result files should be copied in the **src** folder.
 
