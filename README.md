@@ -9,9 +9,13 @@ To run the code you will need Python 3 with common libraries (matplotlib, numpy,
 # Main functions and examples
 
 To create instances of the unsplittable flow problem, use the function generate_instance in src/instance_mcnf.py
+
 To apply the decomposition methods on an instance, use the functions knapsack_model_solver and run_DW_Fenchel_model in src/decompositon_methods.py
+
 An example of how to create an instance and solve it is given in example_test_algorithm.py
+
 An example of how to create a dataset of instance is given in example_create_and_store_instances.py
+
 An example of how to launch the algorithms on a dataset is given in example_launch_dataset.py
 
 
