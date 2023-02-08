@@ -4,9 +4,9 @@ import time
 import pickle
 from multiprocessing import Process, Manager
 
-from decomposition_methods import *
+from src.decomposition_methods import *
 
-def launch_dataset(global_path, dataset_name, algorithm_list, nb_repetitions, nb_workers, duration_before_timeout):
+def launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout, nb_repetitions=1):
     # Launches all the algorithms to test on the instance present in the dataset directory
     # The number of time algorithms are lauched is decided with nb_repetitions
 
@@ -113,26 +113,3 @@ def launch_solver_on_instance(instance_file_path, algorithm_name, print_string, 
     log_file.close()
 
     print("Finished")
-
-
-if __name__ == "__main__":
-    # Set the path to the global directory
-    global_path = "/home/francois/Desktop"
-    # assert False, "Unassigned global_path : Complete global_path with the path to the main directory"
-
-    # Set the number of repetition
-    nb_repetitions = 1
-    nb_workers = 10
-    duration_before_timeout = 60*60
-
-    # list of the algorithm lauched on each dataset
-    settings_list = []
-    # settings_list.append(("small_dataset", ["Fenchel", "Fenchel no preprocessing", "DW-Fenchel", "DW-Fenchel iterative", 'DW-Fenchel no preprocessing', 'DW', "DW momentum", "DW interior"]))
-    settings_list.append(("small_dataset_lower_bound", ["Fenchel", "DW-Fenchel", "DW-Fenchel iterative", "DW-Fenchel single point", 'DW', "DW momentum", "DW interior"]))
-    settings_list.append(("graph_scaling_dataset", ["Fenchel", "DW-Fenchel", "DW-Fenchel iterative", "DW-Fenchel single point", 'DW', "DW momentum", "DW interior"]))
-    # settings_list.append(("graph_scaling_dataset_lower_bound", ["DW-Fenchel iterative", "DW interior"]))
-    # settings_list.append(("capacity_scaling_dataset", ["DW-Fenchel iterative", "DW interior"]))
-
-
-    for dataset_name, algorithm_list in settings_list:
-        launch_dataset(global_path, dataset_name, algorithm_list, nb_repetitions, nb_workers, duration_before_timeout)

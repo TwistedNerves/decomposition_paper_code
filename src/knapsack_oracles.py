@@ -3,7 +3,7 @@ import numpy as np
 import time
 import gurobipy
 
-import knapsacksolver # the code must be able to import knapsacksolver.so which is the result of the compilation of the library made by fontanf : https://github.com/fontanf/knapsacksolver.git, place knapsacksolver.so in the main folder
+import src.knapsacksolver as knapsacksolver # the code must be able to import knapsacksolver.so which is the result of the compilation of the library made by fontanf : https://github.com/fontanf/knapsacksolver.git, place knapsacksolver.so in the main folder
 
 
 
