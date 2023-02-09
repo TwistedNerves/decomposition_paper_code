@@ -5,10 +5,21 @@ import time
 
 
 def generate_instance(graph_type, graph_generator_inputs, demand_generator_inputs, nb_capacity_modifitcations=0):
-    # this function generates an intances according to the asked caracteristics :
-    # - first a graph is generated : a grid graph or a random graph
-    # - then commodities are created so that there exist a solution
-    # - optional : remaining capacities are erased so that the capacities perfectly fit the solution
+    """this function generates an intances according to the asked caracteristics :
+    - first a graph is generated : a grid graph or a random graph
+    - then commodities are created so that there exist a solution to the unsplittable flow problem
+
+    Inputs:
+    graph_type : should be "grid", "random" or "random_connected"
+    graph_generator_inputs : tuple of parameters depending on the graph type, for "random_connected" sould be (nb_nodes, edge_probability, nb_origins, arc_capacity)
+    demand_generator_inputs : dictionary of parameters, typically {"max_demand" : upper_bound_on_commodity_demand}
+
+    Outputs:
+    graph : A list (one entry per node) of dictionaries (one entry per neighbor)
+    commodity_list : A list (one entry per commodity) of tuples (origin, destination, demand)
+    path_list : A list (one entry per commodity) of paths, they form an optimal solution of the unsplittable flow instance
+    origin_list : A list of all nodes that are origin of at least one commodity
+    """
 
     if graph_type == "grid":
         reverse_graph_generator = generate_grid_reverse_graph
@@ -26,7 +37,7 @@ def generate_instance(graph_type, graph_generator_inputs, demand_generator_input
     # commodities generation
     commodity_list, path_list = generate_demand(is_origin_list, reverse_graph, **demand_generator_inputs)
 
-    # the created graph was reversed so we reverse it
+    # the created graph was reversed to facilitate demand generation so we reverse it
     graph = [{neighbor : reverse_graph[neighbor][node] for neighbor in range(len(reverse_graph)) if node in reverse_graph[neighbor]} for node in range(len(reverse_graph))]
 
     for index in range(nb_capacity_modifitcations):
@@ -54,7 +65,7 @@ def generate_grid_reverse_graph(nb_origins, nb_row_grid, nb_column_grid, nb_orig
              reverse_graph[i + nb_row_grid * j][i + nb_row_grid * ((j+1)%nb_column_grid)] = grid_link_capacity
              reverse_graph[i + nb_row_grid * j][i + nb_row_grid * ((j-1)%nb_column_grid)] = grid_link_capacity
 
-    # adding the additional nodes (the origins, i.e. the gateways/pops)
+    # adding the additional nodes (the origins)
     if local_connection_of_origin:
         for d in range(nb_origins):
             origin = d + nb_row_grid * nb_column_grid
@@ -101,6 +112,7 @@ def generate_random_connected_reverse_graph(nb_nodes, edge_proba, nb_origins, ar
     # generates a random graph with uniform capacities
     # the graph is reversed
     # the returned graph is always strongly connected
+    # to do so a random covering tree is generated and then random arcs are added to match the desired sparsity
 
     reverse_graph = [{} for i in range(nb_nodes)]
     is_origin_list = [0]*nb_nodes
@@ -140,10 +152,10 @@ def generate_random_connected_reverse_graph(nb_nodes, edge_proba, nb_origins, ar
 
 def generate_demand(is_origin_list, reverse_graph, random_filling_of_origins=True, random_paths=True, max_demand=1500, delete_resuidal_capacity=False,
                     smaller_commodities=False, verbose=0):
-    # generates the commodities so that there exist a solution
+    # generates the commodities so that there exist a solution to the unsplittable flow problem
     # To create one commodity :
     # a random node is chosen, all the origins attainable from the node are computed
-    # one is randomly chosen with a random path to it, create a commodity demand that can fit on the path
+    # one is randomly chosen with a random path toward it (created with depth first seach), create a commodity demand that can fit on the path
 
     residual_graph = [{neighbor : reverse_graph[node][neighbor] for neighbor in reverse_graph[node]} for node in range(len(reverse_graph))]
     commodity_list = []
@@ -161,7 +173,7 @@ def generate_demand(is_origin_list, reverse_graph, random_filling_of_origins=Tru
         # getting all attainable origins
         origin_list = get_availables_origins(residual_graph, destination, is_origin_list, random_paths)
 
-        # raising the failure when no origin is attainable
+        # finishing the algorithm when no origin is attainable
         if origin_list == []:
             possible_destination_nodes[destination] = 0
             if sum(possible_destination_nodes) == 0:

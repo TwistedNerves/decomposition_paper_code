@@ -36,7 +36,7 @@ if graph_type == "random_connected":
 elif graph_type == "grid":
     graph_generator_inputs = (size, size, size, 2*size, arc_capacity, arc_capacity)
     nb_nodes = size ** 2 + size
-demand_generator_inputs = {"max_demand" : max_demand, "smaller_commodities" : smaller_commodities}
+demand_generator_inputs = {"max_demand" : max_demand}
 
 
 # Choice of the seed

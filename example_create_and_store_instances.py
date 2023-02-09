@@ -24,9 +24,8 @@ max_demand_list = [1000] * nb_unique_exp
 # Select the type of graph to create: note that grid graphs and random connected graphs dont use the size parameter in the same way
 instance_parameter_list = []
 for size, capacity, max_demand in zip(size_list, capacity_list, max_demand_list):
-    # instance_parameter_list.append(("grid", (size, size, size, 2*size, capacity, capacity), {"max_demand" : max_demand, "smaller_commodities" : False}))
-    # instance_parameter_list.append(("grid", (size, size, size, 2*size, capacity, capacity), {"max_demand" : max_demand, "smaller_commodities" : True}))
-    instance_parameter_list += [("random_connected", (size, 5/size, int(size * 0.1), capacity), {"max_demand" : max_demand, "smaller_commodities" : False})]
+    # instance_parameter_list.append(("grid", (size, size, size, 2*size, capacity, capacity), {"max_demand" : max_demand}))
+    instance_parameter_list += [("random_connected", (size, 5/size, int(size * 0.1), capacity), {"max_demand" : max_demand})]
 
 # Set the path to the repository folder
 global_path = "/home/francois/Desktop/"

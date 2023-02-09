@@ -11,7 +11,18 @@ from src.knapsack_oracles import penalized_knapsack_optimizer, in_out_separation
 
 def knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=None, nb_initial_path_created=4, var_delete_proba=0.3,
                             flow_penalisation=0, nb_iterations=10**5, bounds_and_time_list=[], stabilisation="interior_point", verbose=1):
-    # creates a knapsack model (see create_knapsack_model) and solves it
+    """
+    Creates a knapsack model for the unsplittable flow problem (this model is the result of a Dantzig-Wolfe decompostion applied to the capacity contraints, see src.models.create_knapsack_model) and solves it with column generation
+
+    Inputs:
+    graph : graph of the unsplittable flow instance
+    commodity_list : commodity list of the unsplittable flow instance
+    possible_paths_per_commodity=None : a list of allowed paths for each commodity, if None the 4 k-shortest paths are generated
+    stabilisation="interior_point" : determines which stabilizations is used for the column generation process, can be "interior_point", "momentum" or ""
+    ...
+
+    Outputs: None
+    """
     nb_nodes = len(graph)
     nb_commodities = len(commodity_list)
     arc_list = [(node, neighbor) for node in range(len(graph)) for neighbor in graph[node]]
@@ -132,15 +143,25 @@ def run_knapsack_model(graph, commodity_list, model, constraints, stabilisation,
 
 def run_DW_Fenchel_model(graph, commodity_list, separation_options=(True, True, True), possible_paths_per_commodity=None, nb_initial_path_created=4, var_delete_proba=0.3,
                             bounds_and_time_list=[], nb_iterations=10**5, verbose=1):
-    # this algorithm implements the new decomposition method highlighted by this code
-    # it uses a Dantzig-Wolfe master problem and a Fenchel master problem
-    # its subproblem is a Fenchel subproblem with a special normalisation called "directionnal normalisation"
-    # the value of the computed bounds after convergence is the same as the one computed by a Dantzig-Wolfe decomposition algorithm
-    # this function also implements other decomposition methods such as the Fenchel decomposition depending on the separation_option chosen
-    # separation_options is a tuple containing three booleeans : in_out_separation, preprocessing, iterative_separation
-    # in_out_separation : True the directionnal normalisation is used in the subproblem (DW-Fenchel decompostion), False the natural normalization for the unsplittable flow is used (Fenchel decomposition)
-    # preprocessing : whether or not preprocessing is used in the Fenchel separation sub-problem
-    # iterative_separation : can be True only if in_out_separation=True, decide whether the iterative method (see paper) for the resolution of the Fenchel sub-problem is used
+    """
+    This algorithm implements the new decomposition method highlighted by this code
+    It uses a Dantzig-Wolfe master problem and a Fenchel master problem
+    Its subproblem is a Fenchel subproblem with a special normalisation called "directionnal normalisation"
+    The value of the computed bounds after convergence is the same as the one computed by a Dantzig-Wolfe decomposition algorithm
+    This function also implements other decomposition methods such as the Fenchel decomposition depending on the separation_option chosen
+
+    Inputs:
+    graph : graph of the unsplittable flow instance
+    commodity_list : commodity list of the unsplittable flow instance
+    possible_paths_per_commodity=None : a list of allowed paths for each commodity, if None the 4 k-shortest paths are generated
+    separation_options : tuple containing three booleeans : in_out_separation, preprocessing, iterative_separation
+    in_out_separation : True the directionnal normalisation is used in the subproblem (DW-Fenchel decompostion), False the natural normalization for the unsplittable flow is used (Fenchel decomposition)
+    preprocessing : whether or not preprocessing is used in the Fenchel separation sub-problem
+    iterative_separation : can be True only if in_out_separation=True, decide whether the iterative method (see paper) for the resolution of the Fenchel sub-problem is used
+
+    Outputs: None
+    """
+
     nb_nodes = len(graph)
     nb_commodities = len(commodity_list)
     arc_list = [(node, neighbor) for node in range(len(graph)) for neighbor in graph[node]]
