@@ -3,7 +3,7 @@
 This repository is the code base of the paper "On the integration of Dantzig-Wolfe and Fenchel decompositions via directional normalizations"
 It is not made to be understandable without reading the paper first.
 
-To run the code you will need Python 3 with common libraries (matplotlib, numpy, pickle, ...), the mathematical programming solver Gurobi, and an external library solving the knapsack problem in C++ available at https://github.com/fontanf/knapsacksolver (requires Bazel for its compilation, see fontanf's repository)
+To run the code you will need Python 3 with common libraries (matplotlib, numpy, pickle, ...), the mathematical programming solver Gurobi, and an external library solving the knapsack problem in C++ available at https://github.com/fontanf/knapsacksolver (requires Bazel for its compilation, see fontanf's repository; although a precompiled version is already present in the current repository, this version works on some Ubuntu distributions)
 
 
 # Main functions and examples
