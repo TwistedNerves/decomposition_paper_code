@@ -130,7 +130,7 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
                     added_var_list.append(new_var)
                     pattern_var_and_cost_per_arc[arc].append((new_pattern, new_var, pattern_cost))
 
-        if verbose : print("Nb added var = ", nb_var_added, ", Nb total var = ", len(added_var_list), ", Dual_bound = ", dual_bound)
+        if verbose : print("Nb added var = ", nb_var_added, ", Nb total var = ", sum(len(l) for l in pattern_var_and_cost_per_arc), ", Dual_bound = ", dual_bound)
         bounds_and_time_list.append((model.ObjVal, dual_bound, time.time() - starting_time))
 
         if best_dual_bound is None or dual_bound > best_dual_bound:
