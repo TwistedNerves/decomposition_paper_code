@@ -36,15 +36,15 @@ def knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=No
     run_knapsack_model(graph, commodity_list, model, variables, constraints, stabilisation, bounds_and_time_list=bounds_and_time_list, verbose=verbose)
 
 
-def run_knapsack_model(graph, commodity_list, model, variables, constraints, stabilisation, bounds_and_time_list=[], nb_iterations=10**5, initial_BarConvTol=10**-3, var_delete_proba=0.3, verbose=1):
+def run_knapsack_model(graph, commodity_list, model, variables, constraints, stabilisation, bounds_and_time_list=[], nb_iterations=10**5, initial_BarConvTol=10**-3, var_delete_proba=0.0, verbose=1):
     # column generation process used to solve the linear relaxation of a knapsack model (see create_knapsack_model) of the unsplittable flow problem
+    # the knaspsack model is a Dantzig-Wolfe decompostion of the classical model for the unsplittable flow problem
     nb_commodities = len(commodity_list)
     demand_list = [commodity[2] for commodity in commodity_list]
     arc_list = [(node, neighbor) for node in range(len(graph)) for neighbor in graph[node]]
     convexity_constraint_dict, knapsack_convexity_constraint_dict, capacity_constraint_dict = constraints
     path_and_var_per_commodity, pattern_var_and_cost_per_arc = variables
     starting_time = time.time()
-    added_var_list = []
     nb_var_added = 0
     best_dual_bound = None
     used_dual_var_list_per_arc = None
@@ -127,10 +127,9 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
 
                     pattern_cost = max(0, sum(demand_list[commodity_index] for commodity_index in new_pattern) - arc_capacity)
                     new_var = model.addVar(obj=pattern_cost, column=column)
-                    added_var_list.append(new_var)
                     pattern_var_and_cost_per_arc[arc].append((new_pattern, new_var, pattern_cost))
 
-        if verbose : print("Nb added var = ", nb_var_added, ", Nb total var = ", sum(len(l) for l in pattern_var_and_cost_per_arc), ", Dual_bound = ", dual_bound)
+        if verbose : print("Nb added var = ", nb_var_added, ", Nb total var = ", sum(len(pattern_var_and_cost_per_arc[arc]) for arc in pattern_var_and_cost_per_arc), ", Dual_bound = ", dual_bound)
         bounds_and_time_list.append((model.ObjVal, dual_bound, time.time() - starting_time))
 
         if best_dual_bound is None or dual_bound > best_dual_bound:

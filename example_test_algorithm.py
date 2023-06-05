@@ -7,7 +7,7 @@ from src.instance_mcnf import generate_instance
 from src.decomposition_methods import run_DW_Fenchel_model, knapsack_model_solver, compute_possible_paths_per_commodity
 
 # CHOOSE THE SETTING OF THE INSTANCES
-size = 90 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
+size = 50 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
 arc_capacity = 1000 # Capacity of the arcs of the graph
 max_demand = 100 # Upper bound on the size of the commodities
 
