@@ -6,16 +6,16 @@ from multiprocessing import Process, Manager
 
 from src.decomposition_methods import *
 
-def launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout, nb_repetitions=1):
+def launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout, path_generation_loop=False, nb_repetitions=1):
     # Launches all the algorithms to test on the instance present in the dataset directory
     # The number of time algorithms are lauched is decided with nb_repetitions
 
     # Open the file containing the name of the instances
-    instance_name_file = open(global_path + "/MCNF_solver/instance_files_decomposition/" + dataset_name + "/instance_name_file.p", "rb" )
+    instance_name_file = open(global_path + "/decomposition_paper_code/instance_files_decomposition/" + dataset_name + "/instance_name_file.p", "rb" )
     instance_name_list = pickle.load(instance_name_file)
     instance_name_file.close()
 
-    log_file = open(global_path + "/MCNF_solver/log_file.txt", 'w')
+    log_file = open(global_path + "/decomposition_paper_code/log_file.txt", 'w')
     log_file.write("Start\n")
     log_file.close()
 
@@ -52,28 +52,28 @@ def launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, durati
             repetition_index, instance_index, instance_name, algorithm_name = computation_info
 
             print_string = "repetition : {0}/{1}, instance : {2}/{3}, algorithm : {4}".format(repetition_index, nb_repetitions, instance_index, len(instance_name_list), algorithm_name)
-            instance_file_path = global_path + "/MCNF_solver/instance_files_decomposition/" + dataset_name + "/" + instance_name + ".p"
+            instance_file_path = global_path + "/decomposition_paper_code/instance_files_decomposition/" + dataset_name + "/" + instance_name + ".p"
             return_list = manager.list()
 
             # lauching the process on a task
-            process = Process(target=launch_solver_on_instance, args=(instance_file_path, algorithm_name, print_string, global_path, return_list))
+            process = Process(target=launch_solver_on_instance, args=(instance_file_path, algorithm_name, print_string, global_path, path_generation_loop, return_list))
             start_time = time.time()
             process.start()
             worker_list.append((process, start_time, return_list, computation_info))
 
 
     # Write the results in a file
-    result_file = open(global_path + "/MCNF_solver/instance_files_decomposition/" + dataset_name + "/result_file.p", "wb" )
+    result_file = open(global_path + "/decomposition_paper_code/instance_files_decomposition/" + dataset_name + "/result_file.p", "wb" )
     pickle.dump(result_dict, result_file)
     result_file.close()
 
     import datetime
-    log_file = open(global_path + "/MCNF_solver/log_file.txt", 'a')
+    log_file = open(global_path + "/decomposition_paper_code/log_file.txt", 'a')
     log_file.write(datetime.datetime.now().__str__())
     log_file.close()
 
 
-def launch_solver_on_instance(instance_file_path, algorithm_name, print_string, global_path, return_list):
+def launch_solver_on_instance(instance_file_path, algorithm_name, print_string, global_path, path_generation_loop, return_list):
     # Lauch the algorithm named algortihm_name on the instance store in the file at instance_file_path
 
     print(print_string)
@@ -94,21 +94,21 @@ def launch_solver_on_instance(instance_file_path, algorithm_name, print_string, 
 
 
     temp = time.time()
-    l = []
 
     # Launch the chosen algorithm
-    if algorithm_name == "DW" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="", verbose=0)
-    if algorithm_name == "DW momentum" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="momentum", verbose=0)
-    if algorithm_name == "DW interior" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="interior_point", verbose=0)
-    if algorithm_name == "Fenchel" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(False, True, False), verbose=0)
-    if algorithm_name == "Fenchel no preprocessing" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(False, False, False), verbose=0)
-    if algorithm_name == "DW-Fenchel" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, False), verbose=0)
-    if algorithm_name == "DW-Fenchel no preprocessing" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, False, False), verbose=0)
-    if algorithm_name == "DW-Fenchel iterative" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, True), verbose=0)
+    if algorithm_name == "DW" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="", path_generation_loop=path_generation_loop, verbose=0)
+    if algorithm_name == "DW momentum" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="momentum", path_generation_loop=path_generation_loop, verbose=0)
+    if algorithm_name == "DW in out" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="in_out", path_generation_loop=path_generation_loop, verbose=0)
+    if algorithm_name == "DW interior" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="interior_point", path_generation_loop=path_generation_loop, verbose=0)
+    if algorithm_name == "Fenchel" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(False, True, False), path_generation_loop=path_generation_loop, verbose=0)
+    if algorithm_name == "Fenchel no preprocessing" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(False, False, False), path_generation_loop=path_generation_loop, verbose=0)
+    if algorithm_name == "DW-Fenchel" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, False), path_generation_loop=path_generation_loop, verbose=0)
+    if algorithm_name == "DW-Fenchel no preprocessing" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, False, False), path_generation_loop=path_generation_loop, verbose=0)
+    if algorithm_name == "DW-Fenchel iterative" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, True), path_generation_loop=path_generation_loop, verbose=0)
 
     computing_time = time.time() - temp
 
-    log_file = open(global_path + "/MCNF_solver/log_file.txt", 'a')
+    log_file = open(global_path + "/decomposition_paper_code/log_file.txt", 'a')
     log_file.write("Finished : " + instance_file_path + ", " + print_string + "\n")
     log_file.close()
 

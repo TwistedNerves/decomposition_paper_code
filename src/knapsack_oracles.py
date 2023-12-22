@@ -256,6 +256,8 @@ def separation_decomposition_with_preprocessing(demand_list, flow_per_commodity,
     return (commodity_coeff_list, overload_coeff, constant_coeff), pattern_cost_and_amount_list
 
 
+accumulated_time_in_separation_lp = 0
+accumulated_time_in_separation_other = 0
 def in_out_separation_decomposition(demand_list, outter_flow_per_commodity, outter_overload_value, inner_flow_per_commodity, inner_overload_value, arc_capacity, initial_pattern_cost_and_amount_list=[], verbose=0):
     # compute a decomposition of a flow distribution on an arc as a convex combination of commodity patterns. This decompostion is optimal in the sense of the directional nomalization
     # the primal variables of the last iteration indiquate the patterns used in the decomposition and the dual variables of the last iteration represent the coefficients of a cut
@@ -295,10 +297,12 @@ def in_out_separation_decomposition(demand_list, outter_flow_per_commodity, outt
         model.update()
         model.optimize()
 
+
         # getting the dual variables
-        commodity_dual_value_list = -np.array([knapsack_constraint_dict[commodity_index].Pi for commodity_index in range(nb_commodities)])
+        commodity_dual_value_list = np.array([-knapsack_constraint_dict[commodity_index].Pi for commodity_index in range(nb_commodities)])
         overload_dual_value = -overload_constraint.Pi
         convexity_dual_value = -convexity_constraint.Pi
+
 
         # solving the subproblem of the column generation process
         pattern, subproblem_objective_value = penalized_knapsack_optimizer(demand_list, arc_capacity, commodity_dual_value_list, overload_dual_value)
@@ -385,6 +389,7 @@ def in_out_separation_decomposition_with_preprocessing(demand_list, outter_flow_
     fixed_pattern = []
     variable_pattern = []
 
+
     for commodity_index in range(nb_commodities):
         outter_flow, inner_flow = outter_flow_per_commodity[commodity_index], inner_flow_per_commodity[commodity_index]
 
@@ -413,6 +418,7 @@ def in_out_separation_decomposition_with_preprocessing(demand_list, outter_flow_
 
     if overload_coeff == 0:
         return (np.zeros(nb_commodities), 0, 0), pattern_cost_and_amount_list
+    
 
     # lifting of the cut's coefficients
     commodity_coeff_list, constant_coeff, lifting_pattern_and_cost_list = compute_all_lifted_coefficients(demand_list, variable_pattern, variable_commodity_coeff_list, fixed_pattern, constant_coeff, remaining_arc_capacity)
@@ -421,7 +427,6 @@ def in_out_separation_decomposition_with_preprocessing(demand_list, outter_flow_
         pattern_cost_and_amount_list.append((pattern, pattern_cost, 0))
 
     return (commodity_coeff_list, overload_coeff, constant_coeff), pattern_cost_and_amount_list
-
 
 def knapsack_solver(value_list, weight_list, capacity, precision=10**-7):
     # this function solves a classical knapsack problem by calling a MINKNAP algorithm coded in c++ in an external library
@@ -447,18 +452,23 @@ def penalized_knapsack_optimizer(demand_list, arc_capacity, objective_coeff_per_
     # this function solves a special knapsack problem where over-capacitating the knapsack is allowed but penalised
     # this problem can be solved by solving two classical knapsack problem (see the paper for details)
     nb_commodities = len(demand_list)
+    total_demand = sum(demand_list)
 
     first_solution, first_solution_value = knapsack_solver(np.array(objective_coeff_per_commodity), demand_list, arc_capacity)
 
     value_array = overload_penalization * np.array(demand_list) - np.array(objective_coeff_per_commodity)
     value_list = np.array(value_array)
     weight_list = np.array(demand_list)
-    for commodity_index in range(nb_commodities):
-        if value_list[commodity_index] <= 0:
-            value_list[commodity_index] = 0
-            weight_list[commodity_index] = 2*(sum(demand_list) - arc_capacity)
 
-    second_solution, second_solution_value = knapsack_solver(value_list, weight_list, sum(demand_list) - arc_capacity)
+    mask = value_list > 0
+    value_list *= mask
+    weight_list = weight_list * mask + (1 - mask) * 2*(total_demand - arc_capacity)
+    # for commodity_index in range(nb_commodities):
+    #     if value_list[commodity_index] <= 0:
+    #         value_list[commodity_index] = 0
+    #         weight_list[commodity_index] = 2*(total_demand - arc_capacity)
+
+    second_solution, second_solution_value = knapsack_solver(value_list, weight_list, total_demand - arc_capacity)
     second_solution_value = second_solution_value + overload_penalization * arc_capacity - sum(value_array)
 
     if first_solution_value >= second_solution_value:

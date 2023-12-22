@@ -6,11 +6,12 @@ import gurobipy
 
 from src.k_shortest_path import k_shortest_path_all_destination
 from src.models import create_arc_path_model, create_knapsack_model
-from src.knapsack_oracles import penalized_knapsack_optimizer, in_out_separation_decomposition_with_preprocessing, in_out_separation_decomposition, separation_decomposition_with_preprocessing, separation_decomposition
+from src.knapsack_oracles import penalized_knapsack_optimizer, in_out_separation_decomposition_with_preprocessing, in_out_separation_decomposition, separation_decomposition_with_preprocessing, separation_decomposition, approximate_penalized_knapsack_optimizer
+import src.knapsack_oracles as ko
 
 
-def knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=None, nb_initial_path_created=4, var_delete_proba=0.3,
-                            flow_penalisation=0, nb_iterations=10**5, bounds_and_time_list=[], stabilisation="interior_point", verbose=1):
+def knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=None, nb_initial_path_created=4, var_delete_proba=0.,
+                            flow_penalisation=0, nb_iterations=10**5, bounds_and_time_list=[], stabilisation="interior_point", verbose=1, path_generation_loop=False):
     """
     Creates a knapsack model for the unsplittable flow problem (this model is the result of a Dantzig-Wolfe decompostion applied to the capacity contraints, see src.models.create_knapsack_model) and solves it with column generation
 
@@ -23,26 +24,23 @@ def knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=No
 
     Outputs: None
     """
-    nb_nodes = len(graph)
-    nb_commodities = len(commodity_list)
-    arc_list = [(node, neighbor) for node in range(len(graph)) for neighbor in graph[node]]
-    demand_list = [demand for origin, destination, demand in commodity_list]
 
     if possible_paths_per_commodity is None:
         possible_paths_per_commodity = compute_possible_paths_per_commodity(graph, commodity_list, nb_initial_path_created)
 
     model, variables, constraints = create_knapsack_model(graph, commodity_list, possible_paths_per_commodity, flow_penalisation=flow_penalisation, verbose=verbose>1)
 
-    run_knapsack_model(graph, commodity_list, model, variables, constraints, stabilisation, bounds_and_time_list=bounds_and_time_list, verbose=verbose)
+    run_knapsack_model(graph, commodity_list, model, variables, constraints, stabilisation, bounds_and_time_list=bounds_and_time_list, nb_iterations=nb_iterations, path_generation_loop=path_generation_loop, var_delete_proba=var_delete_proba, verbose=verbose)
 
 
-def run_knapsack_model(graph, commodity_list, model, variables, constraints, stabilisation, bounds_and_time_list=[], nb_iterations=10**5, initial_BarConvTol=10**-3, var_delete_proba=0.0, verbose=1):
+def run_knapsack_model(graph, commodity_list, model, variables, constraints, stabilisation, bounds_and_time_list=[], nb_iterations=10**5, initial_BarConvTol=10**-3, var_delete_proba=0.0, path_generation_loop=False, verbose=1):
     # column generation process used to solve the linear relaxation of a knapsack model (see create_knapsack_model) of the unsplittable flow problem
     # the knaspsack model is a Dantzig-Wolfe decompostion of the classical model for the unsplittable flow problem
     nb_commodities = len(commodity_list)
+    nb_nodes = len(graph)
     demand_list = [commodity[2] for commodity in commodity_list]
     arc_list = [(node, neighbor) for node in range(len(graph)) for neighbor in graph[node]]
-    convexity_constraint_dict, knapsack_convexity_constraint_dict, capacity_constraint_dict = constraints
+    convexity_constraint_dict, knapsack_convexity_constraint_dict, linking_constraint_dict = constraints
     path_and_var_per_commodity, pattern_var_and_cost_per_arc = variables
     starting_time = time.time()
     nb_var_added = 0
@@ -59,31 +57,56 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
         model.Params.BarConvTol = initial_BarConvTol # precision of the interior point method
         model.Params.Crossover = 0
 
+    if stabilisation == "in_out":
+        in_out_coeff = 0.9 
+        possible_paths_per_commodity = [[path for path, var in path_and_var] for commodity_index, path_and_var in enumerate(path_and_var_per_commodity)]
+        arc_path_model, _, arc_path_constraints = create_arc_path_model(graph, commodity_list, possible_paths_per_commodity, verbose=verbose>1)
+        arc_path_convexity_constraint_dict, arc_path_capacity_constraint_dict = arc_path_constraints
+
+        arc_path_model.update()
+        arc_path_model.optimize()
+
+        in_dual_var_knapsack_convexity_per_arc = {arc : -arc_path_capacity_constraint_dict[arc].RHS * arc_path_capacity_constraint_dict[arc].Pi for arc in arc_list}
+        in_dual_var_list_per_arc = {arc : -np.array(demand_list) * arc_path_capacity_constraint_dict[arc].Pi for arc in arc_list}
+        in_dual_var_flow_convexity_per_commoditiy = np.array([arc_path_convexity_constraint_dict[commodity_index].Pi for commodity_index in range(nb_commodities)])
+
+
     for iter_index in range(nb_iterations):
         if verbose : print("iteration : ", iter_index)
 
         model.update()
         model.optimize()
-        if verbose : print("Objective function value : ", model.ObjVal)
-        if verbose : print("Master model runtime : ", model.Runtime)
-
-
-        # variable deletion in the Dantzig-Wolfe model to prevent it from becoming to heavy
-        if stabilisation != "interior_point":
-            for arc in arc_list:
-                l = []
-                for pattern, var, pattern_cost in pattern_var_and_cost_per_arc[arc]:
-                    if var.Vbasis != 0 and random.random() < var_delete_proba:
-                        model.remove(var)
-                    else:
-                        l.append((pattern, var, pattern_cost))
-                pattern_var_and_cost_per_arc[arc] = l
 
         # getting the dual variables of the master model
         dual_var_knapsack_convexity_per_arc = {arc : -knapsack_convexity_constraint_dict[arc].Pi for arc in arc_list}
         dual_var_flow_convexity_per_commoditiy = np.array([convexity_constraint_dict[commodity_index].Pi for commodity_index in range(nb_commodities)])
-        dual_var_list_per_arc = {arc : np.array([-constraint.Pi if constraint is not None else 0 for constraint in capacity_constraint_dict[arc]]) for arc in arc_list}
+        dual_var_list_per_arc = {arc : np.array([-constraint.Pi if constraint is not None else 0 for constraint in linking_constraint_dict[arc]]) for arc in arc_list}
 
+        # variable deletion in the Dantzig-Wolfe model to prevent it from becoming to heavy
+        for arc in arc_list:
+            l = []
+            for pattern, var, pattern_cost in pattern_var_and_cost_per_arc[arc]:
+                reduced_cost = dual_var_knapsack_convexity_per_arc[arc] - (sum(dual_var_list_per_arc[arc][commodity_index] for commodity_index in pattern) - pattern_cost)
+                
+                if reduced_cost > 0.001 and random.random() < var_delete_proba:
+                    model.remove(var)
+                else:
+                    l.append((pattern, var, pattern_cost))
+            pattern_var_and_cost_per_arc[arc] = l
+
+        for commodity_index, path_and_var in enumerate(path_and_var_per_commodity):
+            l = []
+            for path, var in path_and_var:
+                reduced_cost = - dual_var_flow_convexity_per_commoditiy[commodity_index]
+                for node_index in range(len(path)-1):
+                    node, neighbor = path[node_index], path[node_index+1]
+                    reduced_cost += dual_var_list_per_arc[node, neighbor][commodity_index]
+
+                if reduced_cost > 0.1 and random.random() < var_delete_proba:
+                    model.remove(var)
+                else:
+                    l.append((path, var))
+            path_and_var_per_commodity[commodity_index] = l
 
         if stabilisation == "momentum" and used_dual_var_list_per_arc is not None: # another stabilisation, dual variables are aggregated through the iterations in a momentum fashion
             momentum_coeff = 0.8
@@ -91,56 +114,91 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
             used_dual_var_knapsack_convexity_per_arc = {arc : momentum_coeff * used_dual_var_knapsack_convexity_per_arc[arc] + (1 - momentum_coeff) * dual_var_knapsack_convexity_per_arc[arc] for arc in arc_list}
             used_dual_var_flow_convexity_per_commoditiy = momentum_coeff * used_dual_var_flow_convexity_per_commoditiy + (1 - momentum_coeff) * dual_var_flow_convexity_per_commoditiy
 
+        elif stabilisation == "in_out" and in_dual_var_list_per_arc != None:
+            used_dual_var_list_per_arc = {arc : in_out_coeff * in_dual_var_list_per_arc[arc] + (1 - in_out_coeff) * dual_var_list_per_arc[arc] for arc in arc_list}
+            used_dual_var_knapsack_convexity_per_arc = {arc : in_out_coeff * in_dual_var_knapsack_convexity_per_arc[arc] + (1 - in_out_coeff) * dual_var_knapsack_convexity_per_arc[arc] for arc in arc_list}
+            used_dual_var_flow_convexity_per_commoditiy = in_out_coeff * in_dual_var_flow_convexity_per_commoditiy + (1 - in_out_coeff) * dual_var_flow_convexity_per_commoditiy
+
         else:
             used_dual_var_list_per_arc = dual_var_list_per_arc
             used_dual_var_knapsack_convexity_per_arc = dual_var_knapsack_convexity_per_arc
             used_dual_var_flow_convexity_per_commoditiy = dual_var_flow_convexity_per_commoditiy
 
-
         dual_bound = 0
         for commodity_index in range(nb_commodities):
             dual_bound += used_dual_var_flow_convexity_per_commoditiy[commodity_index] * convexity_constraint_dict[commodity_index].Rhs
 
+        if path_generation_loop:
+            if verbose: print("path generation", end='\r')
+            dual_val_grap_per_commodity = [[{neighbor : used_dual_var_list_per_arc[node, neighbor][commodity_index] for neighbor in graph[node]} for node in range(nb_nodes)] for commodity_index in range(nb_commodities)]
+            generated_path_list = generate_paths(commodity_list, used_dual_var_flow_convexity_per_commoditiy, dual_val_grap_per_commodity)
+            add_new_paths_to_inner_model(generated_path_list, model, path_and_var_per_commodity, convexity_constraint_dict, linking_constraint_dict)
+            dual_bound += sum(path_reduced_cost for _, _, path_reduced_cost in generated_path_list)
+
         nb_var_added = 0
+        new_pattern_list = []
         # for each arc, a pricing problem is solved for the pattern variables, if a a pattern has a small enough reduced cost it is added to the formulation
         for arc in arc_list:
             if verbose: print(arc, end='   \r')
 
             arc_capacity = graph[arc[0]][arc[1]]
+            dual_var_list = used_dual_var_list_per_arc[arc]
 
             # pricing problem resolution
-            new_pattern, subproblem_objective_value = penalized_knapsack_optimizer(demand_list, arc_capacity, used_dual_var_list_per_arc[arc])
-            new_pattern_list = [new_pattern]
+            if sum(demand_list[commodity_index] for commodity_index in range(nb_commodities) if dual_var_list[commodity_index] != 0) <= arc_capacity:
+                new_pattern = [commodity_index for commodity_index, dual_value in enumerate(dual_var_list) if dual_value != 0]
+                subproblem_objective_value = sum(dual_var_list)
+
+            else:
+                new_pattern, subproblem_objective_value = penalized_knapsack_optimizer(demand_list, arc_capacity, dual_var_list)
+
+
 
             dual_bound -= subproblem_objective_value
-            reduced_cost = -subproblem_objective_value + used_dual_var_knapsack_convexity_per_arc[arc]
+            reduced_cost = used_dual_var_knapsack_convexity_per_arc[arc] - subproblem_objective_value
+            new_pattern_list.append((arc, new_pattern, reduced_cost))
 
             if reduced_cost < -10**-5: # if the best pattern has a small enough reduced cost it is added to the formulation
-                for new_pattern in new_pattern_list:
-                    nb_var_added += 1
-                    column = gurobipy.Column()
-                    column.addTerms(1, knapsack_convexity_constraint_dict[arc])
+                nb_var_added += 1
+                column = gurobipy.Column()
+                column.addTerms(1, knapsack_convexity_constraint_dict[arc])
 
-                    for commodity_index in new_pattern:
-                        if capacity_constraint_dict[arc][commodity_index] is not None:
-                            column.addTerms(-1, capacity_constraint_dict[arc][commodity_index])
+                for commodity_index in new_pattern:
+                    if linking_constraint_dict[arc][commodity_index] is not None:
+                        column.addTerms(-1, linking_constraint_dict[arc][commodity_index])
 
-                    pattern_cost = max(0, sum(demand_list[commodity_index] for commodity_index in new_pattern) - arc_capacity)
-                    new_var = model.addVar(obj=pattern_cost, column=column)
-                    pattern_var_and_cost_per_arc[arc].append((new_pattern, new_var, pattern_cost))
+                pattern_cost = max(0, sum(demand_list[commodity_index] for commodity_index in new_pattern) - arc_capacity)
+                new_var = model.addVar(obj=pattern_cost, column=column)
+                pattern_var_and_cost_per_arc[arc].append((new_pattern, new_var, pattern_cost))
 
-        if verbose : print("Nb added var = ", nb_var_added, ", Nb total var = ", sum(len(pattern_var_and_cost_per_arc[arc]) for arc in pattern_var_and_cost_per_arc), ", Dual_bound = ", dual_bound)
+        if verbose : print("Objective bound : primal", model.ObjVal, "dual", dual_bound)
+        if verbose : print("Master model runtime : ", model.Runtime)
+        nb_pattern_vars = sum(len(pattern_var_and_cost_per_arc[arc]) for arc in pattern_var_and_cost_per_arc)
+        nb_path_vars = sum(len(path_and_var) for path_and_var in path_and_var_per_commodity)
+        if verbose : print("Nb added var = ", nb_var_added, ", Nb total pattern var = ", nb_pattern_vars, ", Nb total path var = ", nb_path_vars)
         bounds_and_time_list.append((model.ObjVal, dual_bound, time.time() - starting_time))
 
         if best_dual_bound is None or dual_bound > best_dual_bound:
             best_dual_bound = dual_bound
 
-        if abs(model.ObjVal - best_dual_bound) < 10**-2: # the column generation stops if the bounds are close enough
+        if model.ObjVal - best_dual_bound < 10**-2: # the column generation stops if the bounds are close enough
             break
 
+        # print("in_out_coeff =", in_out_coeff)
         if nb_var_added == 0: # the column generation stops if no new variable can be added to the master model after disabaling stabilizations
+            print("##### Mispricing")
             if stabilisation == "":
                 break
+            elif stabilisation == "in_out":
+                if 0 == in_out_coeff:
+                    break
+                in_out_coeff = max(in_out_coeff - 0.2, 0)
+                # in_out_coeff = max(1-1.2 * (1-in_out_coeff)**0.7, 0)
+
+                in_dual_var_knapsack_convexity_per_arc = used_dual_var_knapsack_convexity_per_arc
+                in_dual_var_list_per_arc = used_dual_var_list_per_arc
+                in_dual_var_flow_convexity_per_commoditiy = used_dual_var_flow_convexity_per_commoditiy
+
             elif stabilisation == "interior_point" and model.Params.BarConvTol > 10**-3:
                 model.Params.BarConvTol = model.Params.BarConvTol / 3
                 print("BarConvTol = ", model.Params.BarConvTol)
@@ -149,13 +207,40 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
                 model.Params.Method = 3
                 model.Params.BarConvTol = 10**-8
                 model.Params.Crossover = -1
+        
+        elif stabilisation == "in_out":
+
+            subgradient = {arc : np.zeros(nb_commodities) for arc in arc_list}
+            for arc, new_pattern, pattern_reduced_cost in new_pattern_list:
+                for commodity_index in new_pattern:
+                    subgradient[arc][commodity_index] -= 1
+            
+            if path_generation_loop:
+                for commodity_index, path, path_reduced_cost in generated_path_list:
+                    for node_index in range(len(path)-1):
+                        arc = (path[node_index], path[node_index+1])
+                        subgradient[arc][commodity_index] += 1
+            else:
+                for commodity_index, path_and_var in enumerate(path_and_var_per_commodity):
+                    for path, var in path_and_var:
+                        for node_index in range(len(path)-1):
+                            arc = (path[node_index], path[node_index+1])
+                            subgradient[arc][commodity_index] += var.X
+
+            in_out_direction =  {arc : in_dual_var_list_per_arc[arc] - dual_var_list_per_arc[arc] for arc in arc_list}              
+            scalar_product = sum(subgradient[arc] @ in_out_direction[arc] for arc in arc_list)
+            if scalar_product > 0:
+                in_out_coeff = 0.1 + 0.9 * in_out_coeff
+            else:
+                in_out_coeff = max(0, in_out_coeff - 0.1)
+
 
     model.update()
     model.optimize()
 
 
-def run_DW_Fenchel_model(graph, commodity_list, separation_options=(True, True, True), possible_paths_per_commodity=None, nb_initial_path_created=4, var_delete_proba=0.3,
-                            bounds_and_time_list=[], nb_iterations=10**5, verbose=1):
+def run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=None, nb_initial_path_created=4, separation_options=(True, True, True), var_delete_proba=0.3,
+                            bounds_and_time_list=[], nb_iterations=10**5, path_generation_loop=False, verbose=1):
     """
     This algorithm implements the new decomposition method highlighted by this code
     It uses a Dantzig-Wolfe master problem and a Fenchel master problem
@@ -175,8 +260,8 @@ def run_DW_Fenchel_model(graph, commodity_list, separation_options=(True, True, 
     Outputs: None
     """
 
-    nb_nodes = len(graph)
     nb_commodities = len(commodity_list)
+    nb_nodes = len(graph)
     arc_list = [(node, neighbor) for node in range(len(graph)) for neighbor in graph[node]]
     demand_list = [demand for origin, destination, demand in commodity_list]
     starting_time = time.time()
@@ -191,22 +276,12 @@ def run_DW_Fenchel_model(graph, commodity_list, separation_options=(True, True, 
 
     inner_path_and_var_per_commodity, inner_pattern_var_and_cost_per_arc = inner_variables
     outer_path_and_var_per_commodity, outer_overload_vars = outer_variables
+    outer_convexity_constraint_dict, capacity_constraint_dict = outer_constraints
+    inner_convexity_constraint_dict, knapsack_convexity_constraint_dict, linking_constraint_dict = inner_constraints
 
-    # outer_flow_var_dict[arc][commodity_index] contains the sum of varaibles of the Fenchel master problem that indiquates the flow send by a commodity on an arc
-    outer_flow_var_dict = {arc : [0]*nb_commodities for arc in arc_list}
-    for commodity_index, path_and_var in enumerate(outer_path_and_var_per_commodity):
-        for path, var in path_and_var:
-            for node_index in range(len(path)-1):
-                arc = (path[node_index], path[node_index+1])
-                outer_flow_var_dict[arc][commodity_index] += var
+    for arc in arc_list:
+        capacity_constraint_dict[arc] = [(capacity_constraint_dict[arc], demand_list)]
 
-    # inner_flow_var_dict[arc][commodity_index] contains the sum of varaibles of the Dantzig-Wolfe master problem that indiquates the flow send by a commodity on an arc
-    inner_flow_var_dict = {arc : [0]*nb_commodities for arc in arc_list}
-    for commodity_index, path_and_var in enumerate(inner_path_and_var_per_commodity):
-        for path, var in path_and_var:
-            for node_index in range(len(path)-1):
-                arc = (path[node_index], path[node_index+1])
-                inner_flow_var_dict[arc][commodity_index] += var
 
     # parameters of the Dantzig-Wolfe master model
     inner_model.Params.OutputFlag = 0
@@ -227,10 +302,43 @@ def run_DW_Fenchel_model(graph, commodity_list, separation_options=(True, True, 
         outer_model.update()
         outer_model.optimize()
 
+        primal_bound = inner_model.ObjVal
+        dual_bound = outer_model.ObjVal
+
+        # outer_flow_var_dict[arc][commodity_index] contains the sum of varaibles of the Fenchel master problem that indiquates the flow send by a commodity on an arc
+        outer_flow_var_dict = {arc : [0]*nb_commodities for arc in arc_list}
+        for commodity_index, path_and_var in enumerate(outer_path_and_var_per_commodity):
+            for path, var in path_and_var:
+                for node_index in range(len(path)-1):
+                    arc = (path[node_index], path[node_index+1])
+                    outer_flow_var_dict[arc][commodity_index] += var
+
+        # inner_flow_var_dict[arc][commodity_index] contains the sum of varaibles of the Dantzig-Wolfe master problem that indiquates the flow send by a commodity on an arc
+        inner_flow_var_dict = {arc : [0]*nb_commodities for arc in arc_list}
+        for commodity_index, path_and_var in enumerate(inner_path_and_var_per_commodity):
+            for path, var in path_and_var:
+                for node_index in range(len(path)-1):
+                    arc = (path[node_index], path[node_index+1])
+                    inner_flow_var_dict[arc][commodity_index] += var
+
+        if path_generation_loop:
+            if verbose: print("path gen", end='\r')
+            # Computing dual values for path generation
+            inner_dual_var_graph_per_commodity = [[{neighbor : -linking_constraint_dict[node, neighbor][commodity_index].Pi + 10**-5 if linking_constraint_dict[node, neighbor][commodity_index] is not None else 0 for neighbor in graph[node]} for node in range(nb_nodes)] for commodity_index in range(nb_commodities)]
+            inner_convexity_dual_var_list = [inner_convexity_constraint_dict[commodity_index].Pi for commodity_index in range(nb_commodities)]
+            outer_dual_var_graph_per_commodity = [[{neighbor : -sum(constraint.Pi * coeff_list[commodity_index] for constraint, coeff_list in capacity_constraint_dict[node, neighbor]) + 10**-5 for neighbor in graph[node]} for node in range(nb_nodes)] for commodity_index in range(nb_commodities)]
+            outer_convexity_dual_var_list = [outer_convexity_constraint_dict[commodity_index].Pi for commodity_index in range(nb_commodities)]
+
+            generated_path_list_from_inner_model = generate_paths(commodity_list, inner_convexity_dual_var_list, inner_dual_var_graph_per_commodity)
+            generated_path_list_from_outer_model = generate_paths(commodity_list, outer_convexity_dual_var_list, outer_dual_var_graph_per_commodity)
+            new_path_list = generated_path_list_from_inner_model + generated_path_list_from_outer_model
+
+            dual_bound += sum(path_reduced_cost for _, _, path_reduced_cost in generated_path_list_from_outer_model)
+
         try:
-            if verbose : print("Objective function values : DW", inner_model.ObjVal, "F", outer_model.ObjVal)
+            if verbose : print("Objective bounds : primal", primal_bound, "dual", dual_bound)
             if verbose : print("Master model runtimes: DW", inner_model.Runtime, "F", outer_model.Runtime)
-            bounds_and_time_list.append((inner_model.ObjVal, outer_model.ObjVal, time.time() - starting_time))
+            bounds_and_time_list.append((primal_bound, dual_bound, time.time() - starting_time))
 
         except:
             print(inner_model.Status)
@@ -238,10 +346,10 @@ def run_DW_Fenchel_model(graph, commodity_list, separation_options=(True, True, 
             import pdb; pdb.set_trace()
 
         # the method stops if the bounds are close enough
-        if abs(inner_model.ObjVal - outer_model.ObjVal) < 10**-3:
+        if primal_bound - dual_bound < 10**-3:
             break
 
-        # variable deletion in the Dantzig-Wolfe model to prevent it from becoming to heavy
+        # # variable deletion in the Dantzig-Wolfe model to prevent it from becoming to heavy
         for arc in arc_list:
             l = []
             for pattern, var, pattern_cost in inner_pattern_var_and_cost_per_arc[arc]:
@@ -251,10 +359,18 @@ def run_DW_Fenchel_model(graph, commodity_list, separation_options=(True, True, 
                     l.append((pattern, var, pattern_cost))
             inner_pattern_var_and_cost_per_arc[arc] = l
 
+        temp = time.time()
         # subproblem resolution + adding variables and constraints to the two master problems
         nb_separated_arc = apply_fenchel_subproblem(graph, demand_list, outer_model, outer_overload_vars, outer_flow_var_dict,
-                                            inner_model, inner_flow_var_dict, inner_pattern_var_and_cost_per_arc, inner_constraints, separation_options,
+                                            inner_model, inner_flow_var_dict, inner_pattern_var_and_cost_per_arc, inner_constraints, outer_constraints, separation_options,
                                             verbose=verbose)
+        
+        if verbose : print("Subproblem time = ", time.time() - temp)
+
+        if path_generation_loop:
+            add_new_paths_to_inner_model(new_path_list, inner_model, inner_path_and_var_per_commodity, inner_convexity_constraint_dict, linking_constraint_dict)
+            add_new_paths_to_outer_model(new_path_list, outer_model, outer_path_and_var_per_commodity, outer_convexity_constraint_dict, capacity_constraint_dict)
+            
 
         if verbose : print("nb_separated_arc = ", nb_separated_arc)
 
@@ -267,13 +383,14 @@ def run_DW_Fenchel_model(graph, commodity_list, separation_options=(True, True, 
 
 
 def apply_fenchel_subproblem(graph, demand_list, outer_model, outer_overload_vars, outer_flow_var_dict,
-                                    inner_model, inner_flow_var_dict, inner_pattern_var_and_cost_per_arc, inner_constraints, separation_options, verbose=1):
+                                    inner_model, inner_flow_var_dict, inner_pattern_var_and_cost_per_arc, inner_constraints, outer_constraints, separation_options, verbose=1):
     # this method calls the algorithms solving a Fenchel like separation subproblem
     # the cuts and variables (here pattern variables) created are added to the two master problems
     arc_list = [(node, neighbor) for node in range(len(graph)) for neighbor in graph[node]]
     nb_commodities = len(demand_list)
 
-    convexity_constraint_dict, knapsack_convexity_constraint_dict, capacity_constraint_dict = inner_constraints
+    convexity_constraint_dict, knapsack_convexity_constraint_dict, linking_constraint_dict = inner_constraints
+
 
     nb_separated_arc = 0
 
@@ -314,8 +431,10 @@ def apply_fenchel_subproblem(graph, demand_list, outer_model, outer_overload_var
 
         # if the created cut cuts the solution of the Fenchel master problem it is added to the Fenchel master problem
         if sum(outer_flow_per_commodity * commodity_coeff_list) > constant_coeff + 10**-7 + overload_coeff * outer_overload_value:
-            outer_model.addConstr((sum(outer_flow_var * coefficient for outer_flow_var, coefficient in zip(outer_flow_vars, commodity_coeff_list)) - overload_coeff * outer_overload_vars[arc] <= constant_coeff))
+            new_constraint = outer_model.addConstr((sum(outer_flow_var * coefficient for outer_flow_var, coefficient in zip(outer_flow_vars, commodity_coeff_list)) - overload_coeff * outer_overload_vars[arc] <= constant_coeff))
             nb_separated_arc += 1
+            outer_constraints[1][arc].append((new_constraint, commodity_coeff_list))
+
 
         # the created patterns are added to the Dantzig-Wolfe master problem
         for pattern, pattern_cost, amount in pattern_cost_and_amount_list:
@@ -323,8 +442,8 @@ def apply_fenchel_subproblem(graph, demand_list, outer_model, outer_overload_var
             column.addTerms(1, knapsack_convexity_constraint_dict[arc])
 
             for commodity_index in pattern:
-                if capacity_constraint_dict[arc][commodity_index] is not None:
-                    column.addTerms(-1, capacity_constraint_dict[arc][commodity_index])
+                if linking_constraint_dict[arc][commodity_index] is not None:
+                    column.addTerms(-1, linking_constraint_dict[arc][commodity_index])
 
             new_var = inner_model.addVar(obj=pattern_cost, column=column)
             inner_pattern_var_and_cost_per_arc[arc].append((pattern, new_var, pattern_cost))
@@ -368,6 +487,114 @@ def remove_cycle_from_path(path):
             new_path.append(node)
 
     return new_path
+
+
+def generate_paths(commodity_list, convexity_dual_var_list, dual_var_graph_per_commodity):
+    nb_nodes = len(dual_var_graph_per_commodity[0])
+    nb_commodities = len(commodity_list)
+
+    generated_path_list = []
+
+    for commodity_index in range(nb_commodities):
+        origin, destination, demand = commodity_list[commodity_index]
+        shortest_path, path_cost = dijkstra(dual_var_graph_per_commodity[commodity_index], origin, destination)
+
+        reduced_cost = path_cost - convexity_dual_var_list[commodity_index]
+        generated_path_list.append((commodity_index, shortest_path, reduced_cost))
+    
+    return generated_path_list
+
+
+def add_new_paths_to_inner_model(new_path_list, model, path_and_var_per_commodity, convexity_constraint_dict, linking_constraint_dict):
+    for commodity_index, path, path_reduced_cost in new_path_list:
+        if path_reduced_cost < -10**-3:
+            column = gurobipy.Column()
+            column.addTerms(1, convexity_constraint_dict[commodity_index])
+
+            for node_index in range(len(path)-1):
+                node, neighbor = path[node_index], path[node_index+1]
+
+                if linking_constraint_dict[node, neighbor][commodity_index] is None:
+                    linking_constraint_dict[node, neighbor][commodity_index] = model.addConstr((gurobipy.LinExpr(0) <= 0), "capacity")
+
+                column.addTerms(1, linking_constraint_dict[node, neighbor][commodity_index])
+
+            new_var = model.addVar(column=column)
+            path_and_var_per_commodity[commodity_index].append((path, new_var))
+
+
+
+def add_new_paths_to_outer_model(new_path_list, model, path_and_var_per_commodity, convexity_constraint_dict, capacity_constraint_dict):
+    for commodity_index, path, path_reduced_cost in new_path_list:
+        if path_reduced_cost < -10**-3:
+            column = gurobipy.Column()
+            column.addTerms(1, convexity_constraint_dict[commodity_index])
+
+            for node_index in range(len(path)-1):
+                node, neighbor = path[node_index], path[node_index+1]
+
+                for constraint, coeff_list in capacity_constraint_dict[node, neighbor]:
+                    column.addTerms(coeff_list[commodity_index], constraint)
+
+            new_var = model.addVar(column=column)
+            path_and_var_per_commodity[commodity_index].append((path, new_var))
+        
+
+
+def dijkstra(graph, intial_node, destination_node=None):
+    priority_q = [(0, intial_node, None)]
+    parent_list = [None] * len(graph)
+    distances = [None] * len(graph)
+
+    while priority_q:
+        value, current_node, parent_node = hp.heappop(priority_q)
+
+        if distances[current_node] is None:
+            parent_list[current_node] = parent_node
+            distances[current_node] = value
+
+            if current_node == destination_node:
+                break
+
+            for neighbor in graph[current_node]:
+                if distances[neighbor] is None:
+                    hp.heappush(priority_q, (value + graph[current_node][neighbor], neighbor, current_node))
+
+    current_node = destination_node
+    path = []
+    while current_node is not None:
+        path.append(current_node)
+        current_node = parent_list[current_node]
+    path.reverse()
+
+    return path, distances[destination_node]
+
+
+def knapsack_cut_lowerbound(graph, commodity_list, possible_paths_per_commodity=None, nb_initial_path_created=4, verbose=1):
+    nb_nodes = len(graph)
+    nb_commodities = len(commodity_list)
+    arc_list = [(node, neighbor) for node in range(len(graph)) for neighbor in graph[node]]
+    demand_list = [demand for origin, destination, demand in commodity_list]
+
+    if possible_paths_per_commodity is None:
+        possible_paths_per_commodity = compute_possible_paths_per_commodity(graph, commodity_list, nb_initial_path_created)
+
+    model, variables, constraints = create_arc_path_model(graph, commodity_list, possible_paths_per_commodity, verbose=verbose>1)
+    path_and_var_per_commodity, overload_vars = variables
+    convexity_constraint_dict, capacity_constraint_dict = constraints
+    
+    for commodity_index, path_and_var in enumerate(path_and_var_per_commodity):
+        for path, var in path_and_var:
+            var.VType = 'B'
+
+    model.Params.OutputFlag = 1
+    # model.Params.NodeLimit = 10**4
+    model.Params.TimeLimit = 40
+    model.Params.Cuts = 3
+
+    model.update()
+    model.optimize()
+
 
 
 if __name__ == "__main__":

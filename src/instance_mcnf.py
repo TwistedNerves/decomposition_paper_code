@@ -43,8 +43,9 @@ def generate_instance(graph_type, graph_generator_inputs, demand_generator_input
     for index in range(nb_capacity_modifitcations):
         origin = np.random.choice(origin_list)
         neighbor1, neighbor2 = np.random.choice(list(graph[origin].keys()), 2)
-        graph[origin][neighbor1] += 1
-        graph[origin][neighbor2] -= 1
+        capacity_change = min(1 + int(graph[origin][neighbor1]/100), graph[origin][neighbor1], graph[origin][neighbor2])
+        graph[origin][neighbor1] += capacity_change
+        graph[origin][neighbor2] -= capacity_change
 
     return graph, commodity_list, path_list, origin_list
 
