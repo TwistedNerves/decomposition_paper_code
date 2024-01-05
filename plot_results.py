@@ -25,6 +25,16 @@ def mean_confidence_interval_bootstrap(data, confidence=0.95, nb_iterations=1000
     return mean, lower_confidence_interval_bound, upper_confidence_interval_bound
 
 
+def median_and_quantile(data, quantile=0.95):
+    # Computes the mean and confidence interval of the the input data array-like using the bootstraping method
+
+    median = np.median(data)
+    upper_quantile = np.quantile(data, quantile)
+    lower_quantile = np.quantile(data, 1-quantile)
+
+    return median, lower_quantile, upper_quantile
+
+
 def ressample_curve(xy_list, new_abscisse_list):
     # a curve is given in xy_list with its abscisse and ordinate
     # return the same curve but define with different points, the new abscisse to use is given in new_abscisse_list
@@ -56,7 +66,7 @@ def ressample_curve(xy_list, new_abscisse_list):
 def plot_dataset_time_bounds(global_path, dataset_name, size_to_consider, abscisse, algorithm_list=None, x_label="Temps de calcul (s)", y_label="Valeur décalée des bornes", legend_position="upper left"):
     # This function reads the results of a dataset, aggregates the results of instances with the same parameters and plots the curves
 
-    result_file = open(global_path + "/MCNF_solver/instance_files_decomposition/" + dataset_name + "/result_file.p", "rb" )
+    result_file = open(global_path + "/decomposition_paper_code/instance_files_decomposition/" + dataset_name + "/result_file.p", "rb" )
     result_dict = pickle.load(result_file)
     result_file.close()
 
@@ -94,8 +104,8 @@ def plot_dataset_time_bounds(global_path, dataset_name, size_to_consider, abscis
     DW_bounds = {}
     for algorithm_name in algorithm_list:
         for instance_name in result_dict[algorithm_name]:
-            # size = int(instance_name.split('_')[2]) # use for the other datasets
-            size = int(instance_name.split('_')[3]) # use for capacity_scaling_dataset
+            size = int(instance_name.split('_')[2]) # use for the other datasets
+            # size = int(instance_name.split('_')[3]) # use for capacity_scaling_dataset
             if size == size_to_consider:
                 results_list = result_dict[algorithm_name][instance_name][0][0]
                 last_ub, last_lb, finish_time = results_list[-1]
@@ -106,11 +116,10 @@ def plot_dataset_time_bounds(global_path, dataset_name, size_to_consider, abscis
     for algorithm_name in algorithm_list:
         results_temp = {}
         for instance_name in result_dict[algorithm_name]:
-            # size = int(instance_name.split('_')[2]) # use for the other datasets
-            size = int(instance_name.split('_')[3]) # use for capacity_scaling_dataset
+            size = int(instance_name.split('_')[2]) # use for the other datasets
+            # size = int(instance_name.split('_')[3]) # use for capacity_scaling_dataset
             if size == size_to_consider:
                 results_temp[instance_name] = result_dict[algorithm_name][instance_name][0][0]
-                # break
 
         # results aggregation
         ub_list_list = []
@@ -134,8 +143,8 @@ def plot_dataset_time_bounds(global_path, dataset_name, size_to_consider, abscis
             lb_list_list[i] = new_lb_list
 
         # plotting the curves
-        ub_list = [mean_confidence_interval_bootstrap(x, confidence=0.95, nb_iterations=100) for x in zip(*ub_list_list)]
-        lb_list = [mean_confidence_interval_bootstrap(x, confidence=0.95, nb_iterations=100) for x in zip(*lb_list_list)]
+        ub_list = [median_and_quantile(x, quantile=0.75) for x in zip(*ub_list_list)]
+        lb_list = [median_and_quantile(x, quantile=0.75) for x in zip(*lb_list_list)]
         plt.plot(abscisse, [x[0] for x in ub_list], formating[algorithm_name], label=label[algorithm_name], color=colors[algorithm_name], markevery=20)
         plt.fill_between(abscisse, [x[1] for x in ub_list], [x[2] for x in ub_list], alpha=0.25, facecolor=colors[algorithm_name], edgecolor=colors[algorithm_name])
         plt.plot(abscisse, [x[0] for x in lb_list], formating[algorithm_name], color=colors[algorithm_name], markevery=20)
@@ -156,21 +165,22 @@ if __name__ == "__main__":
     # dataset_name = "small_dataset"
     # dataset_name = "graph_scaling_dataset_lower_bound"
     # dataset_name = "small_dataset_lower_bound"
-    dataset_name = "capacity_scaling_dataset"
+    # dataset_name = "capacity_scaling_dataset"
+    dataset_name = "smallest_dataset"
 
     # abscisse used to resample the curves
     abscisse = list(range(1, 60*60, 10))
 
     # list of the algorithms to plot
     algorithm_list = []
-    # algorithm_list.append("Fenchel")
+    algorithm_list.append("Fenchel")
     # algorithm_list.append("Fenchel no preprocessing")
-    # algorithm_list.append("DW")
-    # algorithm_list.append("DW momentum")
+    algorithm_list.append("DW")
+    algorithm_list.append("DW momentum")
     algorithm_list.append("DW interior")
-    # algorithm_list.append("DW-Fenchel")
+    algorithm_list.append("DW-Fenchel")
     algorithm_list.append("DW-Fenchel iterative")
     # algorithm_list.append("DW-Fenchel single point")
     # algorithm_list.append("DW-Fenchel no preprocessing")
 
-    plot_dataset_time_bounds(global_path, dataset_name, 10000, abscisse, algorithm_list=algorithm_list, legend_position=None, x_label="Computing time (s)", y_label="Deviation from optimal bound")
+    plot_dataset_time_bounds(global_path, dataset_name, 50, abscisse, algorithm_list=algorithm_list, legend_position=None, x_label="Computing time (s)", y_label="Deviation from optimal bound")
