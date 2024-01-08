@@ -138,6 +138,7 @@ def separation_decomposition(demand_list, flow_per_commodity, arc_capacity, init
     model = gurobipy.Model()
     model.modelSense = gurobipy.GRB.MINIMIZE
     model.Params.OutputFlag = 0
+    model.Params.Threads = 1
 
     # starts with an approximate decomposition
     pattern_cost_and_amount_list = compute_approximate_decomposition(demand_list, flow_per_commodity, arc_capacity)
@@ -274,6 +275,7 @@ def in_out_separation_decomposition(demand_list, outter_flow_per_commodity, outt
     model = gurobipy.Model()
     model.modelSense = gurobipy.GRB.MINIMIZE
     model.Params.OutputFlag = 0
+    model.Params.Threads = 1
 
     # Create variables
     initial_pattern_var = model.addVar(obj=0)

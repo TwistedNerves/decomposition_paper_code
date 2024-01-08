@@ -28,7 +28,7 @@ tested_algorithms = []
 tested_algorithms.append("DW interior")
 # tested_algorithms.append("Fenchel")
 # tested_algorithms.append("Fenchel no preprocessing")
-tested_algorithms.append("DW-Fenchel")
+# tested_algorithms.append("DW-Fenchel")
 # tested_algorithms.append("DW-Fenchel no preprocessing")
 # tested_algorithms.append("DW-Fenchel iterative")
 

@@ -48,7 +48,7 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
     used_dual_var_list_per_arc = None
 
     # parameter of the solver gurobi
-    model.Params.Method = 3
+    model.Params.Threads = 1
     model.Params.OutputFlag = 0
     if stabilisation == "interior_point": # in this stabilisation, the master model is solved approximatly (10**-3 precision) with an interior point method
         model.update()
@@ -204,7 +204,7 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
                 print("BarConvTol = ", model.Params.BarConvTol)
             else: # stabilisations are disabled in the final iterations of the column generation procedure
                 stabilisation = ""
-                model.Params.Method = 3
+                model.Params.Method = -1
                 model.Params.BarConvTol = 10**-8
                 model.Params.Crossover = -1
         
@@ -285,12 +285,14 @@ def run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=Non
 
     # parameters of the Dantzig-Wolfe master model
     inner_model.Params.OutputFlag = 0
+    inner_model.Params.Threads = 1
     # inner_model.Params.Method = 2
     # inner_model.Params.BarConvTol = 10**-3 # precision of the interior point method
     # inner_model.Params.Crossover = 0
 
     # parameters of the Fenchel master model
     outer_model.Params.OutputFlag = 0
+    outer_model.Params.Threads = 1
 
     # main loop of the algorithm
     for iter_index in range(nb_iterations):

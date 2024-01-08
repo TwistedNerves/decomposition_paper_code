@@ -4,7 +4,7 @@ from src.launch_dataset import launch_dataset
 global_path = "/home/francois/Desktop"
 # assert False, "Unassigned global_path : Complete global_path with the path to the main directory"
 
-nb_workers = 10 # for multiprocessing
+nb_workers = 1 # for multiprocessing
 duration_before_timeout = 60*60 # time limit given to the algorithms
 
 path_generation_loop = False # decides the values of the corresponding entry in the algorithms
