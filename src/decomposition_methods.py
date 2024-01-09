@@ -184,16 +184,13 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
         if model.ObjVal - best_dual_bound < 10**-2: # the column generation stops if the bounds are close enough
             break
 
-        # print("in_out_coeff =", in_out_coeff)
         if nb_var_added == 0: # the column generation stops if no new variable can be added to the master model after disabaling stabilizations
-            print("##### Mispricing")
             if stabilisation == "":
                 break
             elif stabilisation == "in_out":
                 if 0 == in_out_coeff:
                     break
                 in_out_coeff = max(in_out_coeff - 0.2, 0)
-                # in_out_coeff = max(1-1.2 * (1-in_out_coeff)**0.7, 0)
 
                 in_dual_var_knapsack_convexity_per_arc = used_dual_var_knapsack_convexity_per_arc
                 in_dual_var_list_per_arc = used_dual_var_list_per_arc
@@ -201,7 +198,7 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
 
             elif stabilisation == "interior_point" and model.Params.BarConvTol > 10**-3:
                 model.Params.BarConvTol = model.Params.BarConvTol / 3
-                print("BarConvTol = ", model.Params.BarConvTol)
+                if verbose > 0: print("BarConvTol = ", model.Params.BarConvTol)
             else: # stabilisations are disabled in the final iterations of the column generation procedure
                 stabilisation = ""
                 model.Params.Method = -1

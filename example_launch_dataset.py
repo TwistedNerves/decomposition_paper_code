@@ -7,8 +7,6 @@ global_path = "/home/sureli/Documents/Francois"
 nb_workers = 10 # for multiprocessing
 duration_before_timeout = 60*60 # time limit given to the algorithms
 
-path_generation_loop = False # decides the values of the corresponding entry in the algorithms
-
 # List the algorithm lauched on the dataset
 # dataset_name, algorithm_list = "graph_scaling_dataset_lower_bound", ["DW-Fenchel iterative", "DW interior"]
 # dataset_name, algorithm_list = "small_dataset", ["Fenchel", "Fenchel no preprocessing", "DW-Fenchel", "DW-Fenchel iterative", 'DW-Fenchel no preprocessing', 'DW', "DW momentum", "DW interior"]
@@ -19,6 +17,5 @@ path_generation_loop = False # decides the values of the corresponding entry in 
 dataset_name, algorithm_list = "smallest_dataset", ['DW', "DW momentum", "DW in out", "DW interior", "Fenchel", "DW-Fenchel", "DW-Fenchel iterative"]
 launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout)
 
-path_generation_loop = True
 dataset_name, algorithm_list = "smallest_dataset_path_gen", ['DW', "DW momentum", "DW in out", "DW interior", "Fenchel", "DW-Fenchel", "DW-Fenchel iterative"]
-launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout)
+launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout, path_generation_loop=True)

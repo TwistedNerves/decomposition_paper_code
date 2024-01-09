@@ -25,7 +25,7 @@ def mean_confidence_interval_bootstrap(data, confidence=0.95, nb_iterations=1000
     return mean, lower_confidence_interval_bound, upper_confidence_interval_bound
 
 
-def median_and_quantile(data, quantile=0.95):
+def median_and_quantile(data, quantile=0.8):
     # Computes the mean and confidence interval of the the input data array-like using the bootstraping method
 
     median = np.median(data)
@@ -74,21 +74,21 @@ def plot_dataset_time_bounds(global_path, dataset_name, size_to_consider, abscis
         algorithm_list = list(result_dict.keys())
 
     # Color for each algorithm
-    colors = {"Fenchel" : '#1f77b4', "Fenchel no preprocessing" : '#1f77b4', "DW-Fenchel" : '#ffbf0e',
+    colors = {"Fenchel" : '#1f77b4', "Fenchel no preprocessing" : '#1f77b4', "DW-Fenchel" : '#ffbf0e', "DW in out" : '#ff00ff',
                 "DW-Fenchel iterative" : '#d62728', "DW-Fenchel single point" : "#eeee00", 'DW-Fenchel no preprocessing' : '#d62728', "DW" : '#9467bd',
                 "DW momentum" : '#2ca02c', "DW interior" : "#000000"}
 
      # Line style for each algorithm
     formating = {"Fenchel" : '', "Fenchel no preprocessing" : '-o', "DW-Fenchel" : '',
                 "DW-Fenchel iterative" : '', "DW-Fenchel single point" : '', 'DW-Fenchel no preprocessing' : '-o', "DW" : '',
-                "DW momentum" : '', "DW interior" : "",}
+                "DW momentum" : '', "DW interior" : "", "DW in out" : ""}
 
 
      # Name in legend for each algorithm
     label = {"Fenchel" : 'Fenchel', "Fenchel no preprocessing" : 'Fenchel no preprocessing', "DW-Fenchel" : 'DW-Fenchel',
                 "DW-Fenchel iterative" : 'DW-Fenchel iterative', "DW-Fenchel single point" : 'DW-Fenchel single point',
                 'DW-Fenchel no preprocessing' : 'DW-Fenchel no preprocessing', "DW" : 'DW',
-                "DW momentum" : 'DW momentum', "DW interior" : "DW interior point"}
+                "DW momentum" : 'DW momentum', "DW interior" : "DW interior point", "DW in out" : "DW in out"}
 
 
     figure = plt.figure()
@@ -126,6 +126,7 @@ def plot_dataset_time_bounds(global_path, dataset_name, size_to_consider, abscis
         lb_list_list = []
         for instance_name in results_temp:
             results_list = results_temp[instance_name]
+            # if algorithm_name == "DW-Fenchel" and instance_name == "random_connected_50_1000_1000_2": print(results_list)
             ub_time_list = [(time, ub - DW_bounds[instance_name][1]) for ub, lb, time in results_list]
             ub_time_list.append((10**5, ub_time_list[-1][1]))
             lb_time_list = [(time, lb - DW_bounds[instance_name][1]) for ub, lb, time in results_list]
@@ -143,8 +144,10 @@ def plot_dataset_time_bounds(global_path, dataset_name, size_to_consider, abscis
             lb_list_list[i] = new_lb_list
 
         # plotting the curves
-        ub_list = [median_and_quantile(x, quantile=0.75) for x in zip(*ub_list_list)]
-        lb_list = [median_and_quantile(x, quantile=0.75) for x in zip(*lb_list_list)]
+        # ub_list = [median_and_quantile(x) for x in zip(*ub_list_list)]
+        # lb_list = [median_and_quantile(x) for x in zip(*lb_list_list)]
+        ub_list = [mean_confidence_interval_bootstrap(x) for x in zip(*ub_list_list)]
+        lb_list = [mean_confidence_interval_bootstrap(x) for x in zip(*lb_list_list)]
         plt.plot(abscisse, [x[0] for x in ub_list], formating[algorithm_name], label=label[algorithm_name], color=colors[algorithm_name], markevery=20)
         plt.fill_between(abscisse, [x[1] for x in ub_list], [x[2] for x in ub_list], alpha=0.25, facecolor=colors[algorithm_name], edgecolor=colors[algorithm_name])
         plt.plot(abscisse, [x[0] for x in lb_list], formating[algorithm_name], color=colors[algorithm_name], markevery=20)
@@ -166,7 +169,8 @@ if __name__ == "__main__":
     # dataset_name = "graph_scaling_dataset_lower_bound"
     # dataset_name = "small_dataset_lower_bound"
     # dataset_name = "capacity_scaling_dataset"
-    dataset_name = "smallest_dataset"
+    # dataset_name = "smallest_dataset"
+    dataset_name = "smallest_dataset_path_gen"
 
     # abscisse used to resample the curves
     abscisse = list(range(1, 60*60, 10))
@@ -177,6 +181,7 @@ if __name__ == "__main__":
     # algorithm_list.append("Fenchel no preprocessing")
     algorithm_list.append("DW")
     algorithm_list.append("DW momentum")
+    algorithm_list.append("DW in out")
     algorithm_list.append("DW interior")
     algorithm_list.append("DW-Fenchel")
     algorithm_list.append("DW-Fenchel iterative")

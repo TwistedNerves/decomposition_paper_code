@@ -1,7 +1,7 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import random
 import time
+import pickle
 
 from src.instance_mcnf import generate_instance
 from src.decomposition_methods import run_DW_Fenchel_model, knapsack_model_solver, compute_possible_paths_per_commodity, knapsack_cut_lowerbound
@@ -11,7 +11,7 @@ size = 50 # Size of the graph. Note that grid graphs and random connected graphs
 arc_capacity = 1000 # Capacity of the arcs of the graph
 max_demand = 200 # Upper bound on the size of the commodities
 
-path_generation_loop = True
+path_generation_loop = False
 
 # Select the type of graph to create:
 graph_type = "random_connected"
@@ -50,7 +50,14 @@ print("seed = ", seed)
 random.seed(seed); np.random.seed(seed)
 
 # Instance generation
-graph, commodity_list, initial_solution, origin_list = generate_instance(graph_type, graph_generator_inputs, demand_generator_inputs, nb_capacity_modifitcations=10 * size)
+# graph, commodity_list, initial_solution, origin_list = generate_instance(graph_type, graph_generator_inputs, demand_generator_inputs, nb_capacity_modifitcations=10 * size)
+
+global_path = "/home/francois/Desktop"
+instance_name = "random_connected_50_1000_1000_2"
+dataset_name = "smallest_dataset"
+instance_file_path = global_path + "/decomposition_paper_code/instance_files_decomposition/" + dataset_name + "/" + instance_name + ".p"
+instance_file = open(instance_file_path, "rb" )
+graph, commodity_list, initial_solution = pickle.load(instance_file)
 
 print("total_demand is : ", sum([commodity[2] for commodity in commodity_list]))
 print("nb_commodities = ", len(commodity_list))
