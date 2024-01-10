@@ -165,12 +165,12 @@ if __name__ == "__main__":
 
     # choice of the dataset to plot
     # dataset_name = "graph_scaling_dataset"
-    # dataset_name = "small_dataset"
+    dataset_name = "small_dataset"
     # dataset_name = "graph_scaling_dataset_lower_bound"
     # dataset_name = "small_dataset_lower_bound"
     # dataset_name = "capacity_scaling_dataset"
     # dataset_name = "smallest_dataset"
-    dataset_name = "smallest_dataset_path_gen"
+    # dataset_name = "smallest_dataset_path_gen"
 
     # abscisse used to resample the curves
     abscisse = list(range(1, 60*60, 10))
@@ -188,4 +188,4 @@ if __name__ == "__main__":
     # algorithm_list.append("DW-Fenchel single point")
     # algorithm_list.append("DW-Fenchel no preprocessing")
 
-    plot_dataset_time_bounds(global_path, dataset_name, 50, abscisse, algorithm_list=algorithm_list, legend_position=None, x_label="Computing time (s)", y_label="Deviation from optimal bound")
+    plot_dataset_time_bounds(global_path, dataset_name, 70, abscisse, algorithm_list=algorithm_list, legend_position=None, x_label="Computing time (s)", y_label="Deviation from optimal bound")
