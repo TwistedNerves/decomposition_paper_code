@@ -14,7 +14,7 @@ duration_before_timeout = 60*60 # time limit given to the algorithms
 # dataset_name, algorithm_list = "graph_scaling_dataset", ["Fenchel", "DW-Fenchel", "DW-Fenchel iterative", 'DW', "DW momentum", "DW interior"]
 # dataset_name, algorithm_list = "capacity_scaling_dataset", ["DW-Fenchel iterative", "DW interior"]
 
-dataset_name, algorithm_list = "smallest_dataset", ['DW', "DW momentum", "DW in out", "DW interior", "Fenchel", "DW-Fenchel", "DW-Fenchel iterative"]
+dataset_name, algorithm_list = "small_dataset", ['DW', "DW momentum", "DW in out", "DW interior", "Fenchel", "DW-Fenchel", "DW-Fenchel iterative"]
 launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout)
 
 dataset_name, algorithm_list = "smallest_dataset_path_gen", ['DW', "DW momentum", "DW in out", "DW interior", "Fenchel", "DW-Fenchel", "DW-Fenchel iterative"]
