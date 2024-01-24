@@ -126,7 +126,7 @@ def plot_dataset_time_bounds(global_path, dataset_name, size_to_consider, abscis
         lb_list_list = []
         for instance_name in results_temp:
             results_list = results_temp[instance_name]
-            # if algorithm_name == "DW-Fenchel" and instance_name == "random_connected_50_1000_1000_2": print(results_list)
+            if algorithm_name == "DW momentum": print(results_list)
             ub_time_list = [(time, ub - DW_bounds[instance_name][1]) for ub, lb, time in results_list]
             ub_time_list.append((10**5, ub_time_list[-1][1]))
             lb_time_list = [(time, lb - DW_bounds[instance_name][1]) for ub, lb, time in results_list]
@@ -189,3 +189,40 @@ if __name__ == "__main__":
     # algorithm_list.append("DW-Fenchel no preprocessing")
 
     plot_dataset_time_bounds(global_path, dataset_name, 70, abscisse, algorithm_list=algorithm_list, legend_position=None, x_label="Computing time (s)", y_label="Deviation from optimal bound")
+
+
+    # dwf_list = [(31,26,3),(17.5,15,1.3),(28,21,5),(48,40,6),(18,15,1.7)]
+    # f_list = [(157,111,35),(173,124,38),(430,158,254),(296,152,126),(200,115,73)]
+    # dw_list = [(246,11,207),(143,7.7,118),(596,25,527),(811,31,726),(160,9.5,131)]
+
+    # sp_mean = 0
+    # mp_mean = 0
+    # other_mean = 0
+    # for tot, sp, mp in dwf_list:
+    #     sp_mean += sp / tot / len(dwf_list)
+    #     mp_mean += mp / tot / len(dwf_list)
+    #     other_mean += (tot - sp - mp) / tot / len(dwf_list)
+
+    # print("DWF :", sp_mean, mp_mean, other_mean)
+
+    # sp_mean = 0
+    # mp_mean = 0
+    # other_mean = 0
+    # for tot, sp, mp in f_list:
+    #     sp_mean += sp / tot / len(f_list)
+    #     mp_mean += mp / tot / len(f_list)
+    #     other_mean += (tot - sp - mp) / tot / len(f_list)
+
+    # print("F :", sp_mean, mp_mean, other_mean)
+
+    # sp_mean = 0
+    # mp_mean = 0
+    # other_mean = 0
+    # for tot, sp, mp in dw_list:
+    #     sp_mean += sp / tot / len(dw_list)
+    #     mp_mean += mp / tot / len(dw_list)
+    #     other_mean += (tot - sp - mp) / tot / len(dw_list)
+
+    # print("DW :", sp_mean, mp_mean, other_mean)
+    # c_list = [8.8,6.7,7.7,7.0,6.8,6.5,10.5,13.7,3.6,7.5]
+    # print(median_and_quantile(c_list))

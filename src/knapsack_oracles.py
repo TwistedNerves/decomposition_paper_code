@@ -450,11 +450,14 @@ def knapsack_solver(value_list, weight_list, capacity, precision=10**-7):
     return [solution.contains(object_index) for object_index in range(nb_objects)], solution.profit() * precision
 
 
+nb_calls = 0
 def penalized_knapsack_optimizer(demand_list, arc_capacity, objective_coeff_per_commodity, overload_penalization=1, verbose=0):
     # this function solves a special knapsack problem where over-capacitating the knapsack is allowed but penalised
     # this problem can be solved by solving two classical knapsack problem (see the paper for details)
     nb_commodities = len(demand_list)
     total_demand = sum(demand_list)
+    global nb_calls
+    nb_calls += 1
 
     first_solution, first_solution_value = knapsack_solver(np.array(objective_coeff_per_commodity), demand_list, arc_capacity)
 

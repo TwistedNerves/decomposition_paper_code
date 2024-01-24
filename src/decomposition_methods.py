@@ -74,8 +74,10 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
     for iter_index in range(nb_iterations):
         if verbose : print("iteration : ", iter_index)
 
-        model.update()
-        model.optimize()
+        def solve_model(model):
+            model.update()
+            model.optimize()
+        solve_model(model)
 
         # getting the dual variables of the master model
         dual_var_knapsack_convexity_per_arc = {arc : -knapsack_convexity_constraint_dict[arc].Pi for arc in arc_list}
@@ -262,6 +264,7 @@ def run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=Non
     arc_list = [(node, neighbor) for node in range(len(graph)) for neighbor in graph[node]]
     demand_list = [demand for origin, destination, demand in commodity_list]
     starting_time = time.time()
+    ko.nb_calls = 0
 
     # creates a set of allowed paths for each commodity, not all paths are consdered allowed in the formulation
     if possible_paths_per_commodity is None:
@@ -296,10 +299,15 @@ def run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=Non
         if verbose : print("iteration : ", iter_index)
 
         # resolution of the two master models
-        inner_model.update()
-        inner_model.optimize()
-        outer_model.update()
-        outer_model.optimize()
+        # inner_model.update()
+        # inner_model.optimize()
+        # outer_model.update()
+        # outer_model.optimize()
+        def solve_model(model):
+            model.update()
+            model.optimize()
+        solve_model(inner_model)
+        solve_model(outer_model)
 
         primal_bound = inner_model.ObjVal
         dual_bound = outer_model.ObjVal
@@ -349,14 +357,14 @@ def run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=Non
             break
 
         # # variable deletion in the Dantzig-Wolfe model to prevent it from becoming to heavy
-        for arc in arc_list:
-            l = []
-            for pattern, var, pattern_cost in inner_pattern_var_and_cost_per_arc[arc]:
-                if var.Vbasis != 0 and random.random() < var_delete_proba:
-                    inner_model.remove(var)
-                else:
-                    l.append((pattern, var, pattern_cost))
-            inner_pattern_var_and_cost_per_arc[arc] = l
+        # for arc in arc_list:
+        #     l = []
+        #     for pattern, var, pattern_cost in inner_pattern_var_and_cost_per_arc[arc]:
+        #         if var.Vbasis != 0 and random.random() < var_delete_proba:
+        #             inner_model.remove(var)
+        #         else:
+        #             l.append((pattern, var, pattern_cost))
+        #     inner_pattern_var_and_cost_per_arc[arc] = l
 
         temp = time.time()
         # subproblem resolution + adding variables and constraints to the two master problems
@@ -372,6 +380,7 @@ def run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=Non
             
 
         if verbose : print("nb_separated_arc = ", nb_separated_arc)
+        if verbose : print("mean_nb_calls = ", ko.nb_calls / (iter_index+1) / len(arc_list))
 
 
     inner_model.update()

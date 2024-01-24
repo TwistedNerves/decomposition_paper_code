@@ -6,100 +6,101 @@ import pickle
 from src.instance_mcnf import generate_instance
 from src.decomposition_methods import run_DW_Fenchel_model, knapsack_model_solver, compute_possible_paths_per_commodity, knapsack_cut_lowerbound
 
-# CHOOSE THE SETTING OF THE INSTANCES
-size = 50 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
-arc_capacity = 1000 # Capacity of the arcs of the graph
-max_demand = 200 # Upper bound on the size of the commodities
+for i in range(10):
+    # CHOOSE THE SETTING OF THE INSTANCES
+    size = 50 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
+    arc_capacity = 1000 # Capacity of the arcs of the graph
+    max_demand = 100 # Upper bound on the size of the commodities
 
-path_generation_loop = False
+    path_generation_loop = False
 
-# Select the type of graph to create:
-graph_type = "random_connected"
-# graph_type = "grid"
+    # Select the type of graph to create:
+    graph_type = "random_connected"
+    # graph_type = "grid"
 
-smaller_commodities = False # determines what formulae is used to create the demand of a commodity (see annex of the paper)
+    smaller_commodities = False # determines what formulae is used to create the demand of a commodity (see annex of the paper)
 
-# CHOOSE THE TESTED ALGORITHMS
-tested_algorithms = []
-# tested_algorithms.append("knapsack cut lowerbound")
-# tested_algorithms.append("DW")
-# tested_algorithms.append("DW momentum")
-# tested_algorithms.append("DW in out")
-tested_algorithms.append("DW interior")
-# tested_algorithms.append("Fenchel")
-# tested_algorithms.append("Fenchel no preprocessing")
-# tested_algorithms.append("DW-Fenchel")
-# tested_algorithms.append("DW-Fenchel no preprocessing")
-# tested_algorithms.append("DW-Fenchel iterative")
-
-
-# Setting parameters for the instance generator
-if graph_type == "random_connected":
-    graph_generator_inputs = (size, 5/size, int(size * 0.1), arc_capacity)
-    nb_nodes = size
-elif graph_type == "grid":
-    graph_generator_inputs = (size, size, size, 2*size, arc_capacity, arc_capacity)
-    nb_nodes = size ** 2 + size
-demand_generator_inputs = {"max_demand" : max_demand}
+    # CHOOSE THE TESTED ALGORITHMS
+    tested_algorithms = []
+    # tested_algorithms.append("knapsack cut lowerbound")
+    # tested_algorithms.append("DW")
+    # tested_algorithms.append("DW momentum")
+    # tested_algorithms.append("DW in out")
+    # tested_algorithms.append("DW interior")
+    # tested_algorithms.append("Fenchel")
+    # tested_algorithms.append("Fenchel no preprocessing")
+    tested_algorithms.append("DW-Fenchel")
+    # tested_algorithms.append("DW-Fenchel no preprocessing")
+    # tested_algorithms.append("DW-Fenchel iterative")
 
 
-# Choice of the seed
-# seed = random.randint(0, 10**5)
-seed = 48440
-print("seed = ", seed)
-random.seed(seed); np.random.seed(seed)
+    # Setting parameters for the instance generator
+    if graph_type == "random_connected":
+        graph_generator_inputs = (size, 5/size, int(size * 0.1), arc_capacity)
+        nb_nodes = size
+    elif graph_type == "grid":
+        graph_generator_inputs = (size, size, size, 2*size, arc_capacity, arc_capacity)
+        nb_nodes = size ** 2 + size
+    demand_generator_inputs = {"max_demand" : max_demand}
 
-# Instance generation
-# graph, commodity_list, initial_solution, origin_list = generate_instance(graph_type, graph_generator_inputs, demand_generator_inputs, nb_capacity_modifitcations=10 * size)
 
-global_path = "/home/francois/Desktop"
-instance_name = "random_connected_50_1000_1000_2"
-dataset_name = "smallest_dataset"
-instance_file_path = global_path + "/decomposition_paper_code/instance_files_decomposition/" + dataset_name + "/" + instance_name + ".p"
-instance_file = open(instance_file_path, "rb" )
-graph, commodity_list, initial_solution = pickle.load(instance_file)
+    # Choice of the seed
+    seed = random.randint(0, 10**5)
+    # seed = 48440
+    print("seed = ", seed)
+    random.seed(seed); np.random.seed(seed)
 
-print("total_demand is : ", sum([commodity[2] for commodity in commodity_list]))
-print("nb_commodities = ", len(commodity_list))
-print("nb_nodes = ", len(graph))
+    # Instance generation
+    graph, commodity_list, initial_solution, origin_list = generate_instance(graph_type, graph_generator_inputs, demand_generator_inputs, nb_capacity_modifitcations=10 * size)
 
-# Computes a restricted set of paths to be used by each commodity
-possible_paths_per_commodity = compute_possible_paths_per_commodity(graph, commodity_list, 4)
-if not path_generation_loop:
-    for commodity_index in range(len(commodity_list)):
-        possible_paths_per_commodity[commodity_index].append(initial_solution[commodity_index])
-# possible_paths_per_commodity=None
+    # global_path = "/home/francois/Desktop"
+    # instance_name = "random_connected_50_1000_1000_2"
+    # dataset_name = "smallest_dataset"
+    # instance_file_path = global_path + "/decomposition_paper_code/instance_files_decomposition/" + dataset_name + "/" + instance_name + ".p"
+    # instance_file = open(instance_file_path, "rb" )
+    # graph, commodity_list, initial_solution = pickle.load(instance_file)
 
-# Applying the algorithms present in tested_algorithms
-for algorithm_name in tested_algorithms:
-    print("Running {}".format(algorithm_name))
-    temp = time.time()
-    return_list = []
-    verbose=1
+    print("total_demand is : ", sum([commodity[2] for commodity in commodity_list]))
+    print("nb_commodities = ", len(commodity_list))
+    print("nb_nodes = ", len(graph))
 
-    import cProfile, pstats, io
-    from pstats import SortKey
-    pr = cProfile.Profile()
-    pr.enable()
-    # ... do something ...
+    # Computes a restricted set of paths to be used by each commodity
+    possible_paths_per_commodity = compute_possible_paths_per_commodity(graph, commodity_list, 4)
+    if not path_generation_loop:
+        for commodity_index in range(len(commodity_list)):
+            possible_paths_per_commodity[commodity_index].append(initial_solution[commodity_index])
+    # possible_paths_per_commodity=None
 
-    if algorithm_name == "DW" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="", path_generation_loop=path_generation_loop, verbose=verbose)
-    if algorithm_name == "DW momentum" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="momentum", path_generation_loop=path_generation_loop, verbose=verbose)
-    if algorithm_name == "DW in out" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="in_out", path_generation_loop=path_generation_loop, verbose=verbose)
-    if algorithm_name == "DW interior" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="interior_point", path_generation_loop=path_generation_loop, verbose=verbose)
-    if algorithm_name == "Fenchel" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(False, True, False), path_generation_loop=path_generation_loop, verbose=verbose)
-    if algorithm_name == "Fenchel no preprocessing" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(False, False, False), path_generation_loop=path_generation_loop, verbose=verbose)
-    if algorithm_name == "DW-Fenchel" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, False), path_generation_loop=path_generation_loop, verbose=verbose)
-    if algorithm_name == "DW-Fenchel no preprocessing" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, False, False), path_generation_loop=path_generation_loop, verbose=verbose)
-    if algorithm_name == "DW-Fenchel iterative" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, True), path_generation_loop=path_generation_loop, verbose=verbose)
-    if algorithm_name == "knapsack cut lowerbound" : knapsack_cut_lowerbound(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, verbose=verbose)
+    # Applying the algorithms present in tested_algorithms
+    for algorithm_name in tested_algorithms:
+        print("Running {}".format(algorithm_name))
+        temp = time.time()
+        return_list = []
+        verbose=1
 
-    pr.disable()
-    s = io.StringIO()
-    sortby = SortKey.CUMULATIVE
-    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    ps.print_stats()
-    print(s.getvalue())
+        import cProfile, pstats, io
+        from pstats import SortKey
+        pr = cProfile.Profile()
+        pr.enable()
+        # ... do something ...
 
-    computing_time = time.time() - temp
-    print("computing_time = ", computing_time)
+        if algorithm_name == "DW" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="", path_generation_loop=path_generation_loop, verbose=verbose)
+        if algorithm_name == "DW momentum" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="momentum", path_generation_loop=path_generation_loop, verbose=verbose)
+        if algorithm_name == "DW in out" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="in_out", path_generation_loop=path_generation_loop, verbose=verbose)
+        if algorithm_name == "DW interior" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="interior_point", path_generation_loop=path_generation_loop, verbose=verbose)
+        if algorithm_name == "Fenchel" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(False, True, False), path_generation_loop=path_generation_loop, verbose=verbose)
+        if algorithm_name == "Fenchel no preprocessing" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(False, False, False), path_generation_loop=path_generation_loop, verbose=verbose)
+        if algorithm_name == "DW-Fenchel" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, False), path_generation_loop=path_generation_loop, verbose=verbose)
+        if algorithm_name == "DW-Fenchel no preprocessing" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, False, False), path_generation_loop=path_generation_loop, verbose=verbose)
+        if algorithm_name == "DW-Fenchel iterative" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, True), path_generation_loop=path_generation_loop, verbose=verbose)
+        if algorithm_name == "knapsack cut lowerbound" : knapsack_cut_lowerbound(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, verbose=verbose)
+
+        pr.disable()
+        s = io.StringIO()
+        sortby = SortKey.CUMULATIVE
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print(s.getvalue())
+
+        computing_time = time.time() - temp
+        print("computing_time = ", computing_time)
