@@ -41,24 +41,25 @@ for i in range(10):
     elif graph_type == "grid":
         graph_generator_inputs = (size, size, size, 2*size, arc_capacity, arc_capacity)
         nb_nodes = size ** 2 + size
-    demand_generator_inputs = {"max_demand" : max_demand}
+    demand_generator_inputs = {"max_demand" : max_demand, "smaller_commodities" : smaller_commodities}
 
 
     # Choice of the seed
-    seed = random.randint(0, 10**5)
+    # seed = random.randint(0, 10**5)
     # seed = 48440
+    seed = i
     print("seed = ", seed)
     random.seed(seed); np.random.seed(seed)
 
     # Instance generation
-    graph, commodity_list, initial_solution, origin_list = generate_instance(graph_type, graph_generator_inputs, demand_generator_inputs, nb_capacity_modifitcations=10 * size)
+    # graph, commodity_list, initial_solution, origin_list = generate_instance(graph_type, graph_generator_inputs, demand_generator_inputs, nb_capacity_modifitcations=10 * size)
 
-    # global_path = "/home/francois/Desktop"
-    # instance_name = "random_connected_50_1000_1000_2"
-    # dataset_name = "smallest_dataset"
-    # instance_file_path = global_path + "/decomposition_paper_code/instance_files_decomposition/" + dataset_name + "/" + instance_name + ".p"
-    # instance_file = open(instance_file_path, "rb" )
-    # graph, commodity_list, initial_solution = pickle.load(instance_file)
+    global_path = "/home/francois/Desktop"
+    instance_name = "random_connected_70_1000_100_"+str(i)
+    dataset_name = "small_dataset"
+    instance_file_path = global_path + "/decomposition_paper_code/instance_files_decomposition/" + dataset_name + "/" + instance_name + ".p"
+    instance_file = open(instance_file_path, "rb" )
+    graph, commodity_list, initial_solution = pickle.load(instance_file)
 
     print("total_demand is : ", sum([commodity[2] for commodity in commodity_list]))
     print("nb_commodities = ", len(commodity_list))
