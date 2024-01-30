@@ -49,6 +49,7 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
 
     # parameter of the solver gurobi
     model.Params.Threads = 1
+    model.Params.Method = 2
     model.Params.OutputFlag = 0
     if stabilisation == "interior_point": # in this stabilisation, the master model is solved approximatly (10**-3 precision) with an interior point method
         model.update()
@@ -147,7 +148,7 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
             dual_var_list = used_dual_var_list_per_arc[arc]
 
             # pricing problem resolution
-            if sum(demand_list[commodity_index] for commodity_index in range(nb_commodities) if dual_var_list[commodity_index] != 0) <= arc_capacity:
+            if False and sum(demand_list[commodity_index] for commodity_index in range(nb_commodities) if dual_var_list[commodity_index] != 0) <= arc_capacity:
                 new_pattern = [commodity_index for commodity_index, dual_value in enumerate(dual_var_list) if dual_value != 0]
                 subproblem_objective_value = sum(dual_var_list)
 
