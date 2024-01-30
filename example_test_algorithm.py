@@ -18,18 +18,18 @@ for i in range(10):
     graph_type = "random_connected"
     # graph_type = "grid"
 
-    smaller_commodities = False # determines what formulae is used to create the demand of a commodity (see annex of the paper)
+    smaller_commodities = True # determines what formulae is used to create the demand of a commodity (see annex of the paper)
 
     # CHOOSE THE TESTED ALGORITHMS
     tested_algorithms = []
     # tested_algorithms.append("knapsack cut lowerbound")
     # tested_algorithms.append("DW")
     # tested_algorithms.append("DW momentum")
-    # tested_algorithms.append("DW in out")
+    tested_algorithms.append("DW in out")
     # tested_algorithms.append("DW interior")
     # tested_algorithms.append("Fenchel")
     # tested_algorithms.append("Fenchel no preprocessing")
-    tested_algorithms.append("DW-Fenchel")
+    # tested_algorithms.append("DW-Fenchel")
     # tested_algorithms.append("DW-Fenchel no preprocessing")
     # tested_algorithms.append("DW-Fenchel iterative")
 
@@ -78,10 +78,10 @@ for i in range(10):
         return_list = []
         verbose=1
 
-        import cProfile, pstats, io
-        from pstats import SortKey
-        pr = cProfile.Profile()
-        pr.enable()
+        # import cProfile, pstats, io
+        # from pstats import SortKey
+        # pr = cProfile.Profile()
+        # pr.enable()
         # ... do something ...
 
         if algorithm_name == "DW" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="", path_generation_loop=path_generation_loop, verbose=verbose)
@@ -95,12 +95,12 @@ for i in range(10):
         if algorithm_name == "DW-Fenchel iterative" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, True), path_generation_loop=path_generation_loop, verbose=verbose)
         if algorithm_name == "knapsack cut lowerbound" : knapsack_cut_lowerbound(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, verbose=verbose)
 
-        pr.disable()
-        s = io.StringIO()
-        sortby = SortKey.CUMULATIVE
-        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-        ps.print_stats()
-        print(s.getvalue())
+        # pr.disable()
+        # s = io.StringIO()
+        # sortby = SortKey.CUMULATIVE
+        # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        # ps.print_stats()
+        # print(s.getvalue())
 
         computing_time = time.time() - temp
         print("computing_time = ", computing_time)
