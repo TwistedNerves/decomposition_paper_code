@@ -86,30 +86,30 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
         dual_var_list_per_arc = {arc : np.array([-constraint.Pi if constraint is not None else 0 for constraint in linking_constraint_dict[arc]]) for arc in arc_list}
 
         # variable deletion in the Dantzig-Wolfe model to prevent it from becoming to heavy
-        for arc in arc_list:
-            l = []
-            for pattern, var, pattern_cost in pattern_var_and_cost_per_arc[arc]:
-                reduced_cost = dual_var_knapsack_convexity_per_arc[arc] - (sum(dual_var_list_per_arc[arc][commodity_index] for commodity_index in pattern) - pattern_cost)
+        # for arc in arc_list:
+        #     l = []
+        #     for pattern, var, pattern_cost in pattern_var_and_cost_per_arc[arc]:
+        #         reduced_cost = dual_var_knapsack_convexity_per_arc[arc] - (sum(dual_var_list_per_arc[arc][commodity_index] for commodity_index in pattern) - pattern_cost)
                 
-                if reduced_cost > 0.001 and random.random() < var_delete_proba:
-                    model.remove(var)
-                else:
-                    l.append((pattern, var, pattern_cost))
-            pattern_var_and_cost_per_arc[arc] = l
+        #         if reduced_cost > 0.001 and random.random() < var_delete_proba:
+        #             model.remove(var)
+        #         else:
+        #             l.append((pattern, var, pattern_cost))
+        #     pattern_var_and_cost_per_arc[arc] = l
 
-        for commodity_index, path_and_var in enumerate(path_and_var_per_commodity):
-            l = []
-            for path, var in path_and_var:
-                reduced_cost = - dual_var_flow_convexity_per_commoditiy[commodity_index]
-                for node_index in range(len(path)-1):
-                    node, neighbor = path[node_index], path[node_index+1]
-                    reduced_cost += dual_var_list_per_arc[node, neighbor][commodity_index]
+        # for commodity_index, path_and_var in enumerate(path_and_var_per_commodity):
+        #     l = []
+        #     for path, var in path_and_var:
+        #         reduced_cost = - dual_var_flow_convexity_per_commoditiy[commodity_index]
+        #         for node_index in range(len(path)-1):
+        #             node, neighbor = path[node_index], path[node_index+1]
+        #             reduced_cost += dual_var_list_per_arc[node, neighbor][commodity_index]
 
-                if reduced_cost > 0.1 and random.random() < var_delete_proba:
-                    model.remove(var)
-                else:
-                    l.append((path, var))
-            path_and_var_per_commodity[commodity_index] = l
+        #         if reduced_cost > 0.1 and random.random() < var_delete_proba:
+        #             model.remove(var)
+        #         else:
+        #             l.append((path, var))
+        #     path_and_var_per_commodity[commodity_index] = l
 
         if stabilisation == "momentum" and used_dual_var_list_per_arc is not None: # another stabilisation, dual variables are aggregated through the iterations in a momentum fashion
             momentum_coeff = 0.8
@@ -148,14 +148,12 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
             dual_var_list = used_dual_var_list_per_arc[arc]
 
             # pricing problem resolution
-            if False and sum(demand_list[commodity_index] for commodity_index in range(nb_commodities) if dual_var_list[commodity_index] != 0) <= arc_capacity:
+            if sum(demand_list[commodity_index] for commodity_index in range(nb_commodities) if dual_var_list[commodity_index] != 0) <= arc_capacity:
                 new_pattern = [commodity_index for commodity_index, dual_value in enumerate(dual_var_list) if dual_value != 0]
                 subproblem_objective_value = sum(dual_var_list)
 
             else:
                 new_pattern, subproblem_objective_value = penalized_knapsack_optimizer(demand_list, arc_capacity, dual_var_list)
-
-
 
             dual_bound -= subproblem_objective_value
             reduced_cost = used_dual_var_knapsack_convexity_per_arc[arc] - subproblem_objective_value
