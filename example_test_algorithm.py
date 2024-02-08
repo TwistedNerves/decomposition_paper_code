@@ -52,14 +52,8 @@ for i in range(10):
     random.seed(seed); np.random.seed(seed)
 
     # Instance generation
-    # graph, commodity_list, initial_solution, origin_list = generate_instance(graph_type, graph_generator_inputs, demand_generator_inputs, nb_capacity_modifitcations=10 * size)
+    graph, commodity_list, initial_solution, origin_list = generate_instance(graph_type, graph_generator_inputs, demand_generator_inputs, nb_capacity_modifitcations=10 * size)
 
-    global_path = "/home/francois/Desktop"
-    instance_name = "random_connected_70_1000_100_"+str(i)
-    dataset_name = "small_dataset"
-    instance_file_path = global_path + "/decomposition_paper_code/instance_files_decomposition/" + dataset_name + "/" + instance_name + ".p"
-    instance_file = open(instance_file_path, "rb" )
-    graph, commodity_list, initial_solution = pickle.load(instance_file)
 
     print("total_demand is : ", sum([commodity[2] for commodity in commodity_list]))
     print("nb_commodities = ", len(commodity_list))

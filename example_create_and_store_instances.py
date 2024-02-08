@@ -34,12 +34,9 @@ global_path = "/home/francois/Desktop/"
 # assert False, "Unassigned global_path : Complete global_path with the path to the main directory"
 
 # Complete name of the directory that will contain the instances
-# dataset_name = "graph_scaling_dataset_lower_bound/"
-# dataset_name = "graph_scaling_dataset/"
-# dataset_name = "small_dataset/"
-# dataset_name = "small_dataset_lower_bound/"
-# dataset_name = "capacity_scaling_dataset/"
-dataset_name = "smallest_dataset/"
+# dataset_name = "low_demand_max_dataset/"
+# dataset_name = "small_low_demand_max_dataset/"
+dataset_name = "smallest_low_demand_max_dataset/"
 
 instance_name_list = []
 for graph_type, graph_generator_inputs, demand_generator_inputs in instance_parameter_list:

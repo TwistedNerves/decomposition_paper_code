@@ -164,65 +164,29 @@ if __name__ == "__main__":
     # assert False, "Unassigned global_path : Complete global_path with the path to the main directory"
 
     # choice of the dataset to plot
-    # dataset_name = "graph_scaling_dataset"
-    dataset_name = "small_dataset"
-    # dataset_name = "graph_scaling_dataset_lower_bound"
-    # dataset_name = "small_dataset_lower_bound"
-    # dataset_name = "capacity_scaling_dataset"
-    # dataset_name = "smallest_dataset"
-    # dataset_name = "smallest_dataset_path_gen"
+    # dataset_name = "low_demand_max_dataset"
+    dataset_name = "small_low_demand_max_dataset"
+    # dataset_name = "high_demand_max_dataset"
+    # dataset_name = "small_high_demand_max_dataset"
+    # dataset_name = "size_of_capacity_dataset"
+    # dataset_name = "smallest_low_demand_max_dataset"
+    # dataset_name = "smallest_low_demand_max_dataset_path_gen"
+
 
     # abscisse used to resample the curves
     abscisse = list(range(1, 60*60, 10))
 
     # list of the algorithms to plot
     algorithm_list = []
-    algorithm_list.append("Fenchel")
+    # algorithm_list.append("Fenchel")
     # algorithm_list.append("Fenchel no preprocessing")
     algorithm_list.append("DW")
     algorithm_list.append("DW momentum")
     algorithm_list.append("DW in out")
     algorithm_list.append("DW interior")
-    algorithm_list.append("DW-Fenchel")
-    algorithm_list.append("DW-Fenchel iterative")
-    # algorithm_list.append("DW-Fenchel single point")
+    # algorithm_list.append("DW-Fenchel")
+    # algorithm_list.append("DW-Fenchel iterative")
     # algorithm_list.append("DW-Fenchel no preprocessing")
 
-    plot_dataset_time_bounds(global_path, dataset_name, 70, abscisse, algorithm_list=algorithm_list, legend_position=None, x_label="Computing time (s)", y_label="Deviation from optimal bound")
+    plot_dataset_time_bounds(global_path, dataset_name, 70, abscisse, algorithm_list=algorithm_list, legend_position='lower right', x_label="Computing time (s)", y_label="Deviation from optimal bound")
 
-
-    # dwf_list = [(31,26,3),(17.5,15,1.3),(28,21,5),(48,40,6),(18,15,1.7)]
-    # f_list = [(157,111,35),(173,124,38),(430,158,254),(296,152,126),(200,115,73)]
-    # dw_list = [(246,11,207),(143,7.7,118),(596,25,527),(811,31,726),(160,9.5,131)]
-
-    # sp_mean = 0
-    # mp_mean = 0
-    # other_mean = 0
-    # for tot, sp, mp in dwf_list:
-    #     sp_mean += sp / tot / len(dwf_list)
-    #     mp_mean += mp / tot / len(dwf_list)
-    #     other_mean += (tot - sp - mp) / tot / len(dwf_list)
-
-    # print("DWF :", sp_mean, mp_mean, other_mean)
-
-    # sp_mean = 0
-    # mp_mean = 0
-    # other_mean = 0
-    # for tot, sp, mp in f_list:
-    #     sp_mean += sp / tot / len(f_list)
-    #     mp_mean += mp / tot / len(f_list)
-    #     other_mean += (tot - sp - mp) / tot / len(f_list)
-
-    # print("F :", sp_mean, mp_mean, other_mean)
-
-    # sp_mean = 0
-    # mp_mean = 0
-    # other_mean = 0
-    # for tot, sp, mp in dw_list:
-    #     sp_mean += sp / tot / len(dw_list)
-    #     mp_mean += mp / tot / len(dw_list)
-    #     other_mean += (tot - sp - mp) / tot / len(dw_list)
-
-    # print("DW :", sp_mean, mp_mean, other_mean)
-    # c_list = [8.8,6.7,7.7,7.0,6.8,6.5,10.5,13.7,3.6,7.5]
-    # print(median_and_quantile(c_list))
