@@ -2,6 +2,7 @@ from src.launch_dataset import launch_dataset
 
 # Set the path to the repository folder
 global_path = "/home/sureli/Documents/Francois"
+# global_path = "/home/francois/Desktop/"
 # assert False, "Unassigned global_path : Complete global_path with the path to the main directory"
 
 nb_workers = 10 # for multiprocessing

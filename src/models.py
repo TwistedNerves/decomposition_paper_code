@@ -7,12 +7,13 @@ import gurobipy
 from src.knapsack_oracles import separation_decomposition_with_preprocessing
 
 
-def create_arc_path_model(graph, commodity_list, possible_paths_per_commodity, flow_penalisation=0, verbose=0):
+def create_arc_path_model(graph, commodity_list, possible_paths_per_commodity, flow_penalisation=1, overload_penalization=10**5, verbose=0):
     # creates a linear model for the linear relaxation of the unsplittable flow problem based on an arc-path formulation
     nb_commodities = len(commodity_list)
     nb_nodes = len(graph)
     demand_list = [commodity[2] for commodity in commodity_list]
     arc_list = [(node, neighbor) for node in range(nb_nodes) for neighbor in graph[node]]
+    max_demand = max(demand_list)
 
     # Create optimization model
     model = gurobipy.Model('netflow')
@@ -21,8 +22,8 @@ def create_arc_path_model(graph, commodity_list, possible_paths_per_commodity, f
     model.Params.Method = 3
 
     # Create variables
-    path_and_var_per_commodity = [[(path, model.addVar(obj=(len(path) - 1) * flow_penalisation)) for path in possible_paths] for possible_paths in possible_paths_per_commodity]
-    overload_var = model.addVars(arc_list, obj=1, name="overload") # overload variables : we want to minimize their sum
+    path_and_var_per_commodity = [[(path, model.addVar(obj=(len(path) - 1) * flow_penalisation * demand_list[commodity_index]/max_demand)) for path in possible_paths] for commodity_index, possible_paths in enumerate(possible_paths_per_commodity)]
+    overload_var = model.addVars(arc_list, obj=overload_penalization, name="overload") # overload variables : we want to minimize their sum
     if verbose:
         print("variables created")
 
@@ -48,7 +49,7 @@ def create_arc_path_model(graph, commodity_list, possible_paths_per_commodity, f
 
 
 
-def create_knapsack_model(graph, commodity_list, possible_paths_per_commodity, flow_penalisation=0, verbose=1):
+def create_knapsack_model(graph, commodity_list, possible_paths_per_commodity, overload_penalization=10**5, flow_penalisation=1, verbose=1):
     # creates the linear model obtained after applying a Dantzig-Wolfe decomposition to the capacity constraints
     # of an arc-path formulation of the unsplittable flow problem
     nb_commodities = len(commodity_list)
@@ -57,6 +58,7 @@ def create_knapsack_model(graph, commodity_list, possible_paths_per_commodity, f
     arc_list = [(node, neighbor) for node in range(nb_nodes) for neighbor in graph[node]]
 
     # creates the model for an arc path formulation that will be modified
+    print(flow_penalisation)
     model, variables, constraints = create_arc_path_model(graph, commodity_list, possible_paths_per_commodity, flow_penalisation=flow_penalisation, verbose=0)
     path_and_var_per_commodity, overload_var = variables
     convexity_constraint_dict, capacity_constraint_dict = constraints
@@ -78,9 +80,9 @@ def create_knapsack_model(graph, commodity_list, possible_paths_per_commodity, f
     pattern_and_cost_per_arc = {}
     for arc in arc_list:
         arc_capacity = graph[arc[0]][arc[1]]
-        _, pattern_cost_and_amount_list = separation_decomposition_with_preprocessing(demand_list, flow_per_commodity_per_arc[arc], arc_capacity)
-        pattern_and_cost_per_arc[arc] = [(pattern, pattern_cost) for pattern, pattern_cost, amount in pattern_cost_and_amount_list]
-        pattern_and_cost_per_arc[arc].append((list(range(nb_commodities)), sum(demand_list) - arc_capacity))
+        _, pattern_overload_and_amount_list = separation_decomposition_with_preprocessing(demand_list, flow_per_commodity_per_arc[arc], arc_capacity)
+        pattern_and_cost_per_arc[arc] = [(pattern, pattern_overload) for pattern, pattern_overload, amount in pattern_overload_and_amount_list]
+
 
     # removing the uselles parts of the arc-path formualtion
     for constraint in capacity_constraint_dict.values():
@@ -95,10 +97,10 @@ def create_knapsack_model(graph, commodity_list, possible_paths_per_commodity, f
     for arc in arc_list:
         pattern_var_and_cost_per_arc[arc] = []
 
-        for pattern, pattern_cost in pattern_and_cost_per_arc[arc]:
-            pattern_var_and_cost_per_arc[arc].append((pattern, model.addVar(obj=pattern_cost), pattern_cost))
+        for pattern, pattern_overload in pattern_and_cost_per_arc[arc]:
+            pattern_var_and_cost_per_arc[arc].append((pattern, model.addVar(obj=overload_penalization * pattern_overload), pattern_overload))
 
-        knapsack_convexity_constraint_dict[arc] = model.addConstr(sum(var for pattern, var, pattern_cost in pattern_var_and_cost_per_arc[arc]) <= 1)
+        knapsack_convexity_constraint_dict[arc] = model.addConstr(sum(var for pattern, var, pattern_overload in pattern_var_and_cost_per_arc[arc]) <= 1)
 
     # constraints linking the flow variables and the pattern variables
     linking_constraint_dict = {arc : [None] * nb_commodities for arc in arc_list}
@@ -113,7 +115,7 @@ def create_knapsack_model(graph, commodity_list, possible_paths_per_commodity, f
                 edge_var_sum_dict[arc] += var
 
         for arc in edge_var_sum_dict:
-            knapsack_var_sum = sum(var for pattern, var, pattern_cost in pattern_var_and_cost_per_arc[arc] if commodity_index in pattern)
+            knapsack_var_sum = sum(var for pattern, var, pattern_overload in pattern_var_and_cost_per_arc[arc] if commodity_index in pattern)
             linking_constraint_dict[arc][commodity_index] = model.addConstr((edge_var_sum_dict[arc] - knapsack_var_sum <= 0 ), "capacity")
 
     if verbose: print("Linking constraints created")

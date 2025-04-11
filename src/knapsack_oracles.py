@@ -21,11 +21,10 @@ def compute_all_lifted_coefficients(demand_list, variable_pattern, coeff_list, f
         commodity_index = commodity_to_lift_list.pop(0)
         remaining_arc_capacity += demand_list[commodity_index]
 
-        pre_pattern, lifted_coeff_part = penalized_knapsack_optimizer(lifted_demand_list, remaining_arc_capacity, coeff_list)
+        pre_pattern, lifted_coeff_part, pattern_overload = penalized_knapsack_optimizer(lifted_demand_list, remaining_arc_capacity, coeff_list)
 
         pattern = [lifted_commodity_list[index] for index in pre_pattern] + commodity_to_lift_list
-        pattern_cost = max(0, sum(demand_list[commodity_index] for commodity_index in pattern) - remaining_arc_capacity)
-        new_pattern_and_cost_list.append((pattern, pattern_cost))
+        new_pattern_and_cost_list.append((pattern, pattern_overload))
 
         RHS, lifted_coeff = lifted_coeff_part, lifted_coeff_part - RHS
 
@@ -46,7 +45,7 @@ def approximate_penalized_knapsack_optimizer(demand_list, arc_capacity, objectiv
     order_list = [(objective_coeff_per_commodity[commodity_index] / demand_list[commodity_index], commodity_index) for commodity_index in range(nb_commodities)]
     order_list.sort()
     remaining_arc_capacity = max(0, arc_capacity)
-    value = min(0, arc_capacity)
+    value = overload_penalization * min(0, arc_capacity)
     pattern = []
 
     while order_list != []:
@@ -85,17 +84,18 @@ def approximate_penalized_knapsack_optimizer(demand_list, arc_capacity, objectiv
             pattern.append(commodity_index)
             gained_value_list.remove((gained_value, commodity_index))
 
-    return pattern, value
+    pattern_overload = overload_penalization *  max(0, sum(np.array(demand_list)[pattern]) - arc_capacity)
+    return pattern, value, pattern_overload
 
 
-def compute_approximate_decomposition(demand_list, flow_per_commodity, arc_capacity, order_of_commodities="sorted"):
+def compute_approximate_decomposition(demand_list, flow_per_commodity, arc_capacity, overload_penalization=1, order_of_commodities="sorted"):
     # compute a decomposition of a flow distribution on an arc as a convex combination of commodity patterns.
     # The decompostion is computed in a greedy way to minimize the cost of the patterns used
     # The algorithm start with a (very costly) pattern containing all commodities
     # At each iteration the highest cost pattern is selected and a commodity that is over-represented in the decomposition is removed from it
 
     nb_commodities = len(demand_list)
-    cost_pattern_and_amount_list = [[max(0, sum(demand_list) - arc_capacity), list(range(nb_commodities)), 1]]
+    cost_pattern_and_amount_list = [[overload_penalization * max(0, sum(demand_list) - arc_capacity), list(range(nb_commodities)), 1]]
 
     commodity_order = list(range(nb_commodities))
     if order_of_commodities == "sorted":
@@ -107,12 +107,12 @@ def compute_approximate_decomposition(demand_list, flow_per_commodity, arc_capac
         current_flow = 1
         while current_flow > flow_per_commodity[commodity_index] + 10**-5:
             cost_pattern_and_amount = max([x for x in cost_pattern_and_amount_list if commodity_index in x[1]])
-            pattern_cost, pattern, amount = cost_pattern_and_amount
+            pattern_overload, pattern, amount = cost_pattern_and_amount
             new_pattern = list(pattern)
             new_pattern.remove(commodity_index)
-            new_pattern_cost = max(0, pattern_cost - demand_list[commodity_index])
+            new_pattern_overload = max(0, pattern_overload - overload_penalization * demand_list[commodity_index])
             new_amount = min(amount, current_flow - flow_per_commodity[commodity_index])
-            cost_pattern_and_amount_list.append([new_pattern_cost, new_pattern, new_amount])
+            cost_pattern_and_amount_list.append([new_pattern_overload, new_pattern, new_amount])
             current_flow -= new_amount
 
             if new_amount == amount:
@@ -120,11 +120,11 @@ def compute_approximate_decomposition(demand_list, flow_per_commodity, arc_capac
             else:
                 cost_pattern_and_amount[2] -= new_amount
 
-    pattern_cost_and_amount_list = [(pattern, pattern_cost, amount) for pattern_cost, pattern, amount in cost_pattern_and_amount_list]
-    return pattern_cost_and_amount_list
+    pattern_overload_and_amount_list = [(pattern, pattern_overload, amount) for pattern_overload, pattern, amount in cost_pattern_and_amount_list]
+    return pattern_overload_and_amount_list
 
 
-def separation_decomposition(demand_list, flow_per_commodity, arc_capacity, initial_pattern_and_cost_list=None, verbose=0):
+def separation_decomposition(demand_list, flow_per_commodity, arc_capacity, verbose=0):
     # compute a decomposition of a flow distribution on an arc as a convex combination of commodity patterns. This decompostion is optimal in the sense of the cost of the patters used
     # the primal variables of the last iteration indiquate the patterns used in the decomposition and the dual variables of the last iteration represent the coefficients of a cut
     # a colum generation process is used to solve the decomposition problem (see explanations on the subproblem of the Fenchel decomposotion in the paper for more details, the decomposition problem is the dual of the separation Fenchel subproblem)
@@ -141,19 +141,17 @@ def separation_decomposition(demand_list, flow_per_commodity, arc_capacity, init
     model.Params.Threads = 1
 
     # starts with an approximate decomposition
-    pattern_cost_and_amount_list = compute_approximate_decomposition(demand_list, flow_per_commodity, arc_capacity)
-    if False and initial_pattern_and_cost_list is not None:
-        pattern_cost_and_amount_list += [(pattern, pattern_cost, 0) for pattern, pattern_cost in initial_pattern_and_cost_list]
-    pattern_cost_and_amount_list.append((list(range(nb_commodities)), 10**5, 0))
+    # pattern_overload_and_amount_list = []
+    pattern_overload_and_amount_list = compute_approximate_decomposition(demand_list, flow_per_commodity, arc_capacity, overload_penalization=1)
 
     # Create pattern variables
-    pattern_cost_and_var_list = [(pattern, pattern_cost, model.addVar(obj=pattern_cost)) for pattern, pattern_cost, amount in pattern_cost_and_amount_list] # pattern choice variables
+    pattern_overload_and_var_list = [(pattern, pattern_overload, model.addVar(obj=pattern_overload)) for pattern, pattern_overload, amount in pattern_overload_and_amount_list] # pattern choice variables
 
-    convexity_constraint = model.addConstr(gurobipy.LinExpr([(1, var) for pattern, pattern_cost, var in pattern_cost_and_var_list]) == 1)
+    convexity_constraint = model.addConstr(gurobipy.LinExpr([(1, var) for pattern, pattern_overload, var in pattern_overload_and_var_list]) == 1)
 
     knapsack_constraint_dict = {}
     for commodity_index in range(nb_commodities):
-        flow_var = gurobipy.LinExpr([(1, var) for pattern, pattern_cost, var in pattern_cost_and_var_list if commodity_index in pattern])
+        flow_var = gurobipy.LinExpr([(1, var) for pattern, pattern_overload, var in pattern_overload_and_var_list if commodity_index in pattern])
         knapsack_constraint_dict[commodity_index] = model.addConstr((-flow_var <= -flow_per_commodity[commodity_index]))
 
     # main loop of the column generation
@@ -172,18 +170,18 @@ def separation_decomposition(demand_list, flow_per_commodity, arc_capacity, init
         if sum(demand for demand, dual_value in zip(demand_list, commodity_dual_value_list) if dual_value != 0) <= arc_capacity:
             pattern = [commodity_index for commodity_index, dual_value in enumerate(commodity_dual_value_list) if dual_value != 0]
             subproblem_objective_value = -sum(commodity_dual_value_list)
+            pattern_overload = 0
 
         elif use_heuristic:
-            pattern, subproblem_objective_value = approximate_penalized_knapsack_optimizer(demand_list, arc_capacity, -commodity_dual_value_list)
+            pattern, subproblem_objective_value, pattern_overload = approximate_penalized_knapsack_optimizer(demand_list, arc_capacity, -commodity_dual_value_list, overload_penalization=1)
 
         else:
-            pattern, subproblem_objective_value = penalized_knapsack_optimizer(demand_list, arc_capacity, -commodity_dual_value_list)
+            pattern, subproblem_objective_value, pattern_overload = penalized_knapsack_optimizer(demand_list, arc_capacity, -commodity_dual_value_list, overload_penalization=1)
 
         reduced_cost = -subproblem_objective_value - convexity_dual_value
-        pattern_cost = max(0, sum(demand_list[commodity_index] for commodity_index in pattern) - arc_capacity)
-
         if verbose:
             print(i, model.ObjVal, len(demand_list), convexity_dual_value, end='        \r')
+        # print(i, use_heuristic, subproblem_objective_value, convexity_dual_value, pattern_overload, reduced_cost, commodity_dual_value_list, pattern, arc_capacity)
 
         # if a pattern with a negative reduced cost has been computed, it is added to the model
         if reduced_cost < -10**-4:
@@ -194,8 +192,8 @@ def separation_decomposition(demand_list, flow_per_commodity, arc_capacity, init
             for commodity_index in pattern:
                 column.addTerms(-1, knapsack_constraint_dict[commodity_index])
 
-            new_var = model.addVar(obj=pattern_cost, column=column)
-            pattern_cost_and_var_list.append((pattern, pattern_cost, new_var))
+            new_var = model.addVar(obj=pattern_overload, column=column)
+            pattern_overload_and_var_list.append((pattern, pattern_overload, new_var))
 
         else:
             if use_heuristic:
@@ -205,7 +203,7 @@ def separation_decomposition(demand_list, flow_per_commodity, arc_capacity, init
             else:
                 break
 
-    return (-commodity_dual_value_list, 1, -convexity_dual_value), [(pattern, pattern_cost, var.X) for pattern, pattern_cost, var in pattern_cost_and_var_list if var.Vbasis == 0]
+    return (-commodity_dual_value_list, 1, -convexity_dual_value), [(pattern, pattern_overload, var.X) for pattern, pattern_overload, var in pattern_overload_and_var_list if var.Vbasis == 0]
 
 
 def separation_decomposition_with_preprocessing(demand_list, flow_per_commodity, arc_capacity, initial_pattern_and_cost_list=None, verbose=0):
@@ -223,7 +221,7 @@ def separation_decomposition_with_preprocessing(demand_list, flow_per_commodity,
 
     variable_initial_pattern_and_cost_list = []
     if initial_pattern_and_cost_list is not None:
-        for pattern, pattern_cost in initial_pattern_and_cost_list:
+        for pattern, pattern_overload in initial_pattern_and_cost_list:
             partial_pattern = []
             for commodity_index in pattern:
                 if commodity_index in variable_pattern:
@@ -235,31 +233,26 @@ def separation_decomposition_with_preprocessing(demand_list, flow_per_commodity,
 
 
     # calling the separation/decomposition method
-    if len(variable_flow_per_commodity) == 0:
-        constraint_coeff, pre_pattern_cost_and_amount_list = separation_decomposition(variable_demand_list, variable_flow_per_commodity, remaining_arc_capacity, verbose=verbose)
-    else:
-        # constraint_coeff, pre_pattern_cost_and_amount_list = separation_decomposition_aggregation(variable_demand_list, variable_flow_per_commodity, remaining_arc_capacity, verbose=verbose)
-        constraint_coeff, pre_pattern_cost_and_amount_list = separation_decomposition(variable_demand_list, variable_flow_per_commodity, remaining_arc_capacity, initial_pattern_and_cost_list=variable_initial_pattern_and_cost_list, verbose=verbose)
+    constraint_coeff, pre_pattern_overload_and_amount_list = separation_decomposition(variable_demand_list, variable_flow_per_commodity, remaining_arc_capacity, verbose=verbose)
 
     variable_commodity_coeff_list, overload_coeff, constant_coeff = constraint_coeff
-    pattern_cost_and_amount_list = [([variable_pattern[index] for index in pattern] + fixed_pattern, pattern_cost, amount) for pattern, pattern_cost, amount in pre_pattern_cost_and_amount_list]
+    pattern_overload_and_amount_list = [([variable_pattern[index] for index in pattern] + fixed_pattern, pattern_overload, amount) for pattern, pattern_overload, amount in pre_pattern_overload_and_amount_list]
 
     if overload_coeff == 0:
-        return (np.zeros(nb_commodities), 0, 0), pattern_cost_and_amount_list
+        return (np.zeros(nb_commodities), 0, 0), pattern_overload_and_amount_list
 
     # lifting the coefficients of the cut
     commodity_coeff_list, constant_coeff, lifting_pattern_and_cost_list = compute_all_lifted_coefficients(demand_list, variable_pattern, variable_commodity_coeff_list, fixed_pattern, constant_coeff, remaining_arc_capacity)
 
-    for pattern, pattern_cost in lifting_pattern_and_cost_list:
-        pattern_cost_and_amount_list.append((pattern, pattern_cost, 0))
+    for pattern, pattern_overload in lifting_pattern_and_cost_list:
+        pattern_overload_and_amount_list.append((pattern, pattern_overload, 0))
 
-
-    return (commodity_coeff_list, overload_coeff, constant_coeff), pattern_cost_and_amount_list
+    return (commodity_coeff_list, overload_coeff, constant_coeff), pattern_overload_and_amount_list
 
 
 accumulated_time_in_separation_lp = 0
 accumulated_time_in_separation_other = 0
-def in_out_separation_decomposition(demand_list, outter_flow_per_commodity, outter_overload_value, inner_flow_per_commodity, inner_overload_value, arc_capacity, initial_pattern_cost_and_amount_list=[], verbose=0):
+def in_out_separation_decomposition(demand_list, outter_flow_per_commodity, outter_overload_value, inner_flow_per_commodity, inner_overload_value, arc_capacity, initial_pattern_overload_and_amount_list=[], verbose=0):
     # compute a decomposition of a flow distribution on an arc as a convex combination of commodity patterns. This decompostion is optimal in the sense of the directional nomalization
     # the primal variables of the last iteration indiquate the patterns used in the decomposition and the dual variables of the last iteration represent the coefficients of a cut
     # a colum generation process is used to solve the decomposition problem (see explanations on the subproblem of the Fenchel decomposotion in the paper for more details, the decomposition problem is the dual of the separation Fenchel subproblem)
@@ -284,8 +277,8 @@ def in_out_separation_decomposition(demand_list, outter_flow_per_commodity, outt
     penalisation_var_minus = model.addVar(obj=1) # negative part of the penalisation var
     penalisation_var = penalisation_var_plus - penalisation_var_minus
 
-    convexity_constraint = model.addConstr(sum(var for pattern, var, pattern_cost in pattern_var_and_cost_list) == 1)
-    overload_constraint = model.addConstr(sum(var * pattern_cost for pattern, var, pattern_cost in pattern_var_and_cost_list) - penalisation_var * (inner_overload_value - outter_overload_value) <= outter_overload_value)
+    convexity_constraint = model.addConstr(sum(var for pattern, var, pattern_overload in pattern_var_and_cost_list) == 1)
+    overload_constraint = model.addConstr(sum(var * pattern_overload for pattern, var, pattern_overload in pattern_var_and_cost_list) - penalisation_var * (inner_overload_value - outter_overload_value) <= outter_overload_value)
 
     knapsack_constraint_dict = {}
     for commodity_index in range(nb_commodities):
@@ -303,27 +296,27 @@ def in_out_separation_decomposition(demand_list, outter_flow_per_commodity, outt
         # getting the dual variables
         commodity_dual_value_list = np.array([-knapsack_constraint_dict[commodity_index].Pi for commodity_index in range(nb_commodities)])
         overload_dual_value = -overload_constraint.Pi
+        
         convexity_dual_value = -convexity_constraint.Pi
 
 
         # solving the subproblem of the column generation process
-        pattern, subproblem_objective_value = penalized_knapsack_optimizer(demand_list, arc_capacity, commodity_dual_value_list, overload_dual_value)
+        pattern, subproblem_objective_value, pattern_overload = penalized_knapsack_optimizer(demand_list, arc_capacity, commodity_dual_value_list, overload_dual_value)
 
         reduced_cost = -subproblem_objective_value + convexity_dual_value
-        pattern_cost = max(0, sum(demand_list[commodity_index] for commodity_index in pattern) - arc_capacity)
         if verbose : print(i, model.ObjVal, reduced_cost, end='          \r')
 
         #  if the pattern with a negative reduced cost is computed it is added to the model
         if reduced_cost < -10**-5:
             column = gurobipy.Column()
             column.addTerms(1, convexity_constraint)
-            column.addTerms(pattern_cost, overload_constraint)
+            column.addTerms(pattern_overload, overload_constraint)
 
             for commodity_index in pattern:
                 column.addTerms(-1, knapsack_constraint_dict[commodity_index])
 
             new_var = model.addVar(obj=0, column=column)
-            pattern_var_and_cost_list.append((pattern, new_var, pattern_cost))
+            pattern_var_and_cost_list.append((pattern, new_var, pattern_overload))
 
         else:
             break
@@ -334,7 +327,7 @@ def in_out_separation_decomposition(demand_list, outter_flow_per_commodity, outt
         convexity_dual_value = convexity_dual_value / overload_dual_value
         overload_dual_value = 1
 
-    return (commodity_dual_value_list, overload_dual_value, convexity_dual_value), [(pattern, pattern_cost, var.X) for pattern, var, pattern_cost in pattern_var_and_cost_list[1:] if var.VBasis == 0]
+    return (commodity_dual_value_list, overload_dual_value, convexity_dual_value), [(pattern, pattern_overload, var.X) for pattern, var, pattern_overload in pattern_var_and_cost_list[1:] if var.VBasis == 0]
 
 
 def in_out_separation_decomposition_iterative(demand_list, outter_flow_per_commodity, outter_overload_value, inner_flow_per_commodity, inner_overload_value, arc_capacity):
@@ -344,6 +337,9 @@ def in_out_separation_decomposition_iterative(demand_list, outter_flow_per_commo
     # separation/decomposition using another normalisation called repeatedly to make the computation
     nb_commodities = len(demand_list)
     in_out_convex_coeff = 0
+    demand_list = np.array(demand_list)
+    # inner_flow_per_commodity = np.array(inner_flow_per_commodity)
+    # outter_flow_per_commodity = np.array(outter_flow_per_commodity)
     inner_flow_per_commodity = np.clip(inner_flow_per_commodity, 0, 1)
     inner_flow_per_commodity = 10**-6 * np.floor(inner_flow_per_commodity * 10**6)
     outter_flow_per_commodity = np.clip(outter_flow_per_commodity, 0, 1)
@@ -355,31 +351,43 @@ def in_out_separation_decomposition_iterative(demand_list, outter_flow_per_commo
     inner_overload_value += 0.1
 
 
-    _, inner_pattern_cost_and_amount_list = separation_decomposition_with_preprocessing(demand_list, inner_flow_per_commodity, arc_capacity, verbose=0)
-    inner_pattern_and_cost_list = [(pattern, pattern_cost) for pattern, pattern_cost, amount in inner_pattern_cost_and_amount_list]
+    _, inner_pattern_overload_and_amount_list = separation_decomposition_with_preprocessing(demand_list, inner_flow_per_commodity, arc_capacity, verbose=0)
+    inner_pattern_and_cost_list = [(pattern, pattern_overload) for pattern, pattern_overload, amount in inner_pattern_overload_and_amount_list]
+    inner_decomposition_overload = sum(max(0, sum(demand_list[pattern]) - arc_capacity) * amount for pattern, pattern_overload, amount in inner_pattern_overload_and_amount_list)
+
+
+    _, outter_pattern_overload_and_amount_list = separation_decomposition_with_preprocessing(demand_list, outter_flow_per_commodity, arc_capacity, verbose=0)
+    outter_pattern_and_cost_list = [(pattern, pattern_overload) for pattern, pattern_overload, amount in outter_pattern_overload_and_amount_list]
+    outter_decomposition_overload = sum(max(0, sum(demand_list[pattern]) - arc_capacity) * amount for pattern, pattern_overload, amount in outter_pattern_overload_and_amount_list)
 
     i = 0
-    use_heuristic = True
     while True:
         i+=1
-        constraint_coeff, pattern_cost_and_amount_list = separation_decomposition_with_preprocessing(demand_list, current_flow_per_commodity, arc_capacity, initial_pattern_and_cost_list=inner_pattern_and_cost_list + old_pattern_and_cost_list, verbose=0)
+        constraint_coeff, pattern_overload_and_amount_list = separation_decomposition_with_preprocessing(demand_list, current_flow_per_commodity, arc_capacity, initial_pattern_and_cost_list=inner_pattern_and_cost_list + old_pattern_and_cost_list, verbose=0)
 
-        decomposition_overload = sum(pattern_cost * amount for pattern, pattern_cost, amount in pattern_cost_and_amount_list)
+        decomposition_overload = sum(max(0, sum(demand_list[pattern]) - arc_capacity) * amount for pattern, pattern_overload, amount in pattern_overload_and_amount_list)
         if current_overload_value > decomposition_overload - 10**-5:
             break
 
-        commodity_coeff_list, overload_coeff, constant_coeff = constraint_coeff
-        old_pattern_and_cost_list = [(pattern, pattern_cost) for pattern, pattern_cost, amount in pattern_cost_and_amount_list]
+        decompostion_flow_per_commodity = inner_flow_per_commodity * 0
+        for pattern, pattern_overload, amount in pattern_overload_and_amount_list:
+            decompostion_flow_per_commodity[pattern] += amount
 
-        if sum(commodity_coeff_list * current_flow_per_commodity) > overload_coeff * current_overload_value + constant_coeff:
+        commodity_coeff_list, overload_coeff, constant_coeff = constraint_coeff 
+        # print(i, current_overload_value, decomposition_overload, outter_overload_value, outter_decomposition_overload, inner_overload_value, inner_decomposition_overload, in_out_convex_coeff)
+        
+        old_pattern_and_cost_list = [(pattern, pattern_overload) for pattern, pattern_overload, amount in pattern_overload_and_amount_list]
+
+        if sum(commodity_coeff_list * current_flow_per_commodity) + 10**-5 > overload_coeff * current_overload_value + constant_coeff:
             outter_value = sum(commodity_coeff_list * outter_flow_per_commodity) - overload_coeff * outter_overload_value - constant_coeff
             inner_value = sum(commodity_coeff_list * inner_flow_per_commodity) - overload_coeff * inner_overload_value - constant_coeff
             in_out_convex_coeff = max(0, min(1, (- outter_value) / (inner_value - outter_value)))
             current_flow_per_commodity = in_out_convex_coeff * inner_flow_per_commodity + (1 - in_out_convex_coeff) * outter_flow_per_commodity
             current_overload_value = in_out_convex_coeff * inner_overload_value + (1 - in_out_convex_coeff) * outter_overload_value
             old_constraint_coeff = constraint_coeff
+            # print((- outter_value) / (inner_value - outter_value), inner_value, outter_value)
 
-    return old_constraint_coeff, pattern_cost_and_amount_list
+    return old_constraint_coeff, pattern_overload_and_amount_list
 
 
 def in_out_separation_decomposition_with_preprocessing(demand_list, outter_flow_per_commodity, outter_overload_value, inner_flow_per_commodity,
@@ -390,7 +398,6 @@ def in_out_separation_decomposition_with_preprocessing(demand_list, outter_flow_
     nb_commodities = len(demand_list)
     fixed_pattern = []
     variable_pattern = []
-
 
     for commodity_index in range(nb_commodities):
         outter_flow, inner_flow = outter_flow_per_commodity[commodity_index], inner_flow_per_commodity[commodity_index]
@@ -411,26 +418,26 @@ def in_out_separation_decomposition_with_preprocessing(demand_list, outter_flow_
 
     # call to the separation/decomposition algorithm
     if iterative_separation:
-        constraint_coeff, pre_pattern_cost_and_amount_list = in_out_separation_decomposition_iterative(variable_demand_list, variable_outter_flow_per_commodity, outter_overload_value, variable_inner_flow_per_commodity, inner_overload_value, remaining_arc_capacity)
+        constraint_coeff, pre_pattern_overload_and_amount_list = in_out_separation_decomposition_iterative(variable_demand_list, variable_outter_flow_per_commodity, outter_overload_value, variable_inner_flow_per_commodity, inner_overload_value, remaining_arc_capacity)
     else:
-        constraint_coeff, pre_pattern_cost_and_amount_list = in_out_separation_decomposition(variable_demand_list, variable_outter_flow_per_commodity, outter_overload_value, variable_inner_flow_per_commodity, inner_overload_value, remaining_arc_capacity)
+        constraint_coeff, pre_pattern_overload_and_amount_list = in_out_separation_decomposition(variable_demand_list, variable_outter_flow_per_commodity, outter_overload_value, variable_inner_flow_per_commodity, inner_overload_value, remaining_arc_capacity)
 
     variable_commodity_coeff_list, overload_coeff, constant_coeff = constraint_coeff
-    pattern_cost_and_amount_list = [([variable_pattern[index] for index in pattern] + fixed_pattern, pattern_cost, amount) for pattern, pattern_cost, amount in pre_pattern_cost_and_amount_list]
+    pattern_overload_and_amount_list = [([variable_pattern[index] for index in pattern] + fixed_pattern, pattern_overload, amount) for pattern, pattern_overload, amount in pre_pattern_overload_and_amount_list]
 
     if overload_coeff == 0:
-        return (np.zeros(nb_commodities), 0, 0), pattern_cost_and_amount_list
+        return (np.zeros(nb_commodities), 0, 0), pattern_overload_and_amount_list
     
 
     # lifting of the cut's coefficients
     commodity_coeff_list, constant_coeff, lifting_pattern_and_cost_list = compute_all_lifted_coefficients(demand_list, variable_pattern, variable_commodity_coeff_list, fixed_pattern, constant_coeff, remaining_arc_capacity)
 
-    for pattern, pattern_cost in lifting_pattern_and_cost_list:
-        pattern_cost_and_amount_list.append((pattern, pattern_cost, 0))
+    for pattern, pattern_overload in lifting_pattern_and_cost_list:
+        pattern_overload_and_amount_list.append((pattern, pattern_overload, 0))
 
-    return (commodity_coeff_list, overload_coeff, constant_coeff), pattern_cost_and_amount_list
+    return (commodity_coeff_list, overload_coeff, constant_coeff), pattern_overload_and_amount_list
 
-def knapsack_solver(value_list, weight_list, capacity, precision=10**-7):
+def knapsack_solver(weight_list, capacity, value_list, precision=10**-7):
     # this function solves a classical knapsack problem by calling a MINKNAP algorithm coded in c++ in an external library
     nb_objects = len(value_list)
 
@@ -447,7 +454,7 @@ def knapsack_solver(value_list, weight_list, capacity, precision=10**-7):
 
     solution = knapsacksolver.solve(instance, algorithm = "minknap", verbose = False)
 
-    return [solution.contains(object_index) for object_index in range(nb_objects)], solution.profit() * precision
+    return [object_index for object_index in range(nb_objects) if solution.contains(object_index)], solution.profit() * precision
 
 
 nb_calls = 0
@@ -459,25 +466,29 @@ def penalized_knapsack_optimizer(demand_list, arc_capacity, objective_coeff_per_
     global nb_calls
     nb_calls += 1
 
-    first_solution, first_solution_value = knapsack_solver(np.array(objective_coeff_per_commodity), demand_list, arc_capacity)
+    first_solution, first_solution_value = knapsack_solver(demand_list, arc_capacity, np.array(objective_coeff_per_commodity))
 
     value_array = overload_penalization * np.array(demand_list) - np.array(objective_coeff_per_commodity)
     value_list = np.array(value_array)
     weight_list = np.array(demand_list)
 
-    mask = value_list > 0
+    mask = value_list >= 0
     value_list *= mask
     weight_list = weight_list * mask + (1 - mask) * 2*(total_demand - arc_capacity)
-    # for commodity_index in range(nb_commodities):
-    #     if value_list[commodity_index] <= 0:
-    #         value_list[commodity_index] = 0
-    #         weight_list[commodity_index] = 2*(total_demand - arc_capacity)
 
-    second_solution, second_solution_value = knapsack_solver(value_list, weight_list, total_demand - arc_capacity)
+    second_solution, second_solution_value = knapsack_solver(weight_list, total_demand - arc_capacity, value_list)
     second_solution_value = second_solution_value + overload_penalization * arc_capacity - sum(value_array)
 
     if first_solution_value >= second_solution_value:
-        return [commodity_index for commodity_index in range(nb_commodities) if first_solution[commodity_index] and objective_coeff_per_commodity[commodity_index] !=0], first_solution_value
+        solution = first_solution 
+        solution_value = first_solution_value
 
     else:
-        return [commodity_index for commodity_index in range(nb_commodities) if not second_solution[commodity_index] and objective_coeff_per_commodity[commodity_index] !=0], second_solution_value
+        is_in_solution = np.ones(nb_commodities)
+        is_in_solution[second_solution] = 0
+        solution = [commodity_index for commodity_index in range(nb_commodities) if is_in_solution[commodity_index]]
+        solution_value = second_solution_value
+        
+    solution_overload = overload_penalization *  max(0, sum(np.array(demand_list)[solution]) - arc_capacity)
+
+    return solution, solution_value, solution_overload

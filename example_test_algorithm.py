@@ -4,13 +4,13 @@ import time
 import pickle
 
 from src.instance_mcnf import generate_instance
-from src.decomposition_methods import run_DW_Fenchel_model, knapsack_model_solver, compute_possible_paths_per_commodity, knapsack_cut_lowerbound
+from src.decomposition_methods import run_DW_Fenchel_model, knapsack_model_solver, compute_possible_paths_per_commodity, knapsack_cut_lowerbound, dijkstra
 
-for i in range(10):
+for i in range(1):
     # CHOOSE THE SETTING OF THE INSTANCES
-    size = 50 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
+    size = 30 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
     arc_capacity = 1000 # Capacity of the arcs of the graph
-    max_demand = 100 # Upper bound on the size of the commodities
+    max_demand = 1000 # Upper bound on the size of the commodities
 
     path_generation_loop = False
 
@@ -25,13 +25,13 @@ for i in range(10):
     # tested_algorithms.append("knapsack cut lowerbound")
     # tested_algorithms.append("DW")
     # tested_algorithms.append("DW momentum")
-    tested_algorithms.append("DW in out")
-    # tested_algorithms.append("DW interior")
+    tested_algorithms.append("DW interior")
+    # tested_algorithms.append("DW in out")
     # tested_algorithms.append("Fenchel")
     # tested_algorithms.append("Fenchel no preprocessing")
     # tested_algorithms.append("DW-Fenchel")
     # tested_algorithms.append("DW-Fenchel no preprocessing")
-    # tested_algorithms.append("DW-Fenchel iterative")
+    tested_algorithms.append("DW-Fenchel iterative")
 
 
     # Setting parameters for the instance generator
@@ -45,19 +45,21 @@ for i in range(10):
 
 
     # Choice of the seed
-    # seed = random.randint(0, 10**5)
-    # seed = 48440
-    seed = i
+    seed = random.randint(0, 10**5)
+    # seed = 45440
+    # seed = i
     print("seed = ", seed)
     random.seed(seed); np.random.seed(seed)
 
     # Instance generation
-    graph, commodity_list, initial_solution, origin_list = generate_instance(graph_type, graph_generator_inputs, demand_generator_inputs, nb_capacity_modifitcations=10 * size)
+    graph, commodity_list, initial_solution, origin_list = generate_instance(graph_type, graph_generator_inputs, demand_generator_inputs, nb_capacity_modifitcations=0 * size)
 
 
     print("total_demand is : ", sum([commodity[2] for commodity in commodity_list]))
     print("nb_commodities = ", len(commodity_list))
     print("nb_nodes = ", len(graph))
+    print("nb_arcs = ", sum(len(l) for l in graph))
+    # print(commodity_list)
 
     # Computes a restricted set of paths to be used by each commodity
     possible_paths_per_commodity = compute_possible_paths_per_commodity(graph, commodity_list, 4)
@@ -65,6 +67,18 @@ for i in range(10):
         for commodity_index in range(len(commodity_list)):
             possible_paths_per_commodity[commodity_index].append(initial_solution[commodity_index])
     # possible_paths_per_commodity=None
+
+
+    # possible_paths_per_commodity = [[path] for path in initial_solution]
+    # for origin, destination, demand in commodity_list:
+
+    #     for repetition in range(8):
+    #         graph_weighted = [{neighbor : 1/random.random() for neighbor in neighbor_list} for neighbor_list in graph]
+    #         path, distances = dijkstra(graph_weighted, origin, destination)
+    #         if path not in possible_paths_per_commodity[commodity_index]:
+    #             possible_paths_per_commodity[commodity_index].append(path)
+    
+    print(sum(len(l) for l in possible_paths_per_commodity) / len(commodity_list))
 
     # Applying the algorithms present in tested_algorithms
     for algorithm_name in tested_algorithms:
