@@ -4,11 +4,11 @@ import time
 import pickle
 
 from src.instance_mcnf import generate_instance
-from src.decomposition_methods import run_DW_Fenchel_model, knapsack_model_solver, compute_possible_paths_per_commodity, knapsack_cut_lowerbound, dijkstra
+from src.decomposition_methods import run_DW_Fenchel_model, knapsack_model_solver, compute_possible_paths_per_commodity, dijkstra, gurobi_with_cuts
 
 for i in range(1):
     # CHOOSE THE SETTING OF THE INSTANCES
-    size = 30 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
+    size = 50 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
     arc_capacity = 1000 # Capacity of the arcs of the graph
     max_demand = 1000 # Upper bound on the size of the commodities
 
@@ -25,13 +25,13 @@ for i in range(1):
     # tested_algorithms.append("knapsack cut lowerbound")
     # tested_algorithms.append("DW")
     # tested_algorithms.append("DW momentum")
-    tested_algorithms.append("DW interior")
+    # tested_algorithms.append("DW interior")
     # tested_algorithms.append("DW in out")
     # tested_algorithms.append("Fenchel")
     # tested_algorithms.append("Fenchel no preprocessing")
     # tested_algorithms.append("DW-Fenchel")
     # tested_algorithms.append("DW-Fenchel no preprocessing")
-    tested_algorithms.append("DW-Fenchel iterative")
+    # tested_algorithms.append("DW-Fenchel iterative")
 
 
     # Setting parameters for the instance generator
@@ -78,7 +78,6 @@ for i in range(1):
     #         if path not in possible_paths_per_commodity[commodity_index]:
     #             possible_paths_per_commodity[commodity_index].append(path)
     
-    print(sum(len(l) for l in possible_paths_per_commodity) / len(commodity_list))
 
     # Applying the algorithms present in tested_algorithms
     for algorithm_name in tested_algorithms:
@@ -86,12 +85,6 @@ for i in range(1):
         temp = time.time()
         return_list = []
         verbose=1
-
-        # import cProfile, pstats, io
-        # from pstats import SortKey
-        # pr = cProfile.Profile()
-        # pr.enable()
-        # ... do something ...
 
         if algorithm_name == "DW" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="", path_generation_loop=path_generation_loop, verbose=verbose)
         if algorithm_name == "DW momentum" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="momentum", path_generation_loop=path_generation_loop, verbose=verbose)
@@ -104,12 +97,7 @@ for i in range(1):
         if algorithm_name == "DW-Fenchel iterative" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, True), path_generation_loop=path_generation_loop, verbose=verbose)
         if algorithm_name == "knapsack cut lowerbound" : knapsack_cut_lowerbound(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, verbose=verbose)
 
-        # pr.disable()
-        # s = io.StringIO()
-        # sortby = SortKey.CUMULATIVE
-        # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-        # ps.print_stats()
-        # print(s.getvalue())
-
         computing_time = time.time() - temp
         print("computing_time = ", computing_time)
+    
+    gurobi_with_cuts(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity)

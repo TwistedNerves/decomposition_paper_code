@@ -22,8 +22,8 @@ def create_arc_path_model(graph, commodity_list, possible_paths_per_commodity, f
     model.Params.Method = 3
 
     # Create variables
-    path_and_var_per_commodity = [[(path, model.addVar(obj=(len(path) - 1) * flow_penalisation * demand_list[commodity_index]/max_demand)) for path in possible_paths] for commodity_index, possible_paths in enumerate(possible_paths_per_commodity)]
-    overload_var = model.addVars(arc_list, obj=overload_penalization, name="overload") # overload variables : we want to minimize their sum
+    path_and_var_per_commodity = [[(path, model.addVar(obj=(len(path) - 1) * flow_penalisation * (demand / max_demand * 0 + 1))) for path in possible_paths_per_commodity[commodity_index]] for commodity_index, demand in enumerate(demand_list)]
+    overload_variables = model.addVars(arc_list, obj=overload_penalization, name="overload") # overload variables : we want to minimize their sum
     if verbose:
         print("variables created")
 
@@ -40,12 +40,12 @@ def create_arc_path_model(graph, commodity_list, possible_paths_per_commodity, f
                 arc = (path[node_index], path[node_index+1])
                 edge_var_sum_dict[arc] += var * demand
 
-    capacity_constraint_dict = model.addConstrs((edge_var_sum_dict[arc] - overload_var[arc] <= graph[arc[0]][arc[1]] for arc in arc_list))
+    capacity_constraint_dict = model.addConstrs((edge_var_sum_dict[arc] - overload_variables[arc] <= graph[arc[0]][arc[1]] for arc in arc_list))
     if verbose:
         print("Capacity constraints created")
 
     model.update()
-    return model, (path_and_var_per_commodity, overload_var), (convexity_constraint_dict, capacity_constraint_dict)
+    return model, (path_and_var_per_commodity, overload_variables), (convexity_constraint_dict, capacity_constraint_dict)
 
 
 
@@ -60,7 +60,7 @@ def create_knapsack_model(graph, commodity_list, possible_paths_per_commodity, o
     # creates the model for an arc path formulation that will be modified
     print(flow_penalisation)
     model, variables, constraints = create_arc_path_model(graph, commodity_list, possible_paths_per_commodity, flow_penalisation=flow_penalisation, verbose=0)
-    path_and_var_per_commodity, overload_var = variables
+    path_and_var_per_commodity, overload_variables = variables
     convexity_constraint_dict, capacity_constraint_dict = constraints
 
     # obtaining a solution of the arc-path formualtion enables us to create a set of valid variable for the Dantzig-Wolfe model
@@ -88,7 +88,7 @@ def create_knapsack_model(graph, commodity_list, possible_paths_per_commodity, o
     for constraint in capacity_constraint_dict.values():
         model.remove(constraint)
 
-    for var in overload_var.values():
+    for var in overload_variables.values():
         model.remove(var)
 
     # creating the inital pattern variables for each arc
@@ -123,6 +123,43 @@ def create_knapsack_model(graph, commodity_list, possible_paths_per_commodity, o
     model.update()
     return model, (path_and_var_per_commodity, pattern_var_and_cost_per_arc), (convexity_constraint_dict, knapsack_convexity_constraint_dict, linking_constraint_dict)
 
+
+
+def create_arc_node_model(graph, commodity_list, flow_penalisation=1, overload_penalization=10**5, verbose=0):
+    # LP program that solves the multicommodity flow problem with the following objective function : minimize the sum of the arc_list overload
+    nb_nodes = len(graph)
+    nb_commodities = len(commodity_list)
+    arc_list = [(node, neighbor) for node in range(nb_nodes) for neighbor in graph[node]]
+    demand_list = [demand for origin, destination, demand in commodity_list]
+    max_demand = max(demand_list)
+
+    # Create optimization model
+    model = gurobipy.Model('netflow')
+    model.modelSense = gurobipy.GRB.MINIMIZE
+    model.Params.OutputFlag = verbose>1
+
+    # Create variables
+    flow_variables = [model.addVars(arc_list, obj=flow_penalisation * (demand / max_demand * 0 + 1)) for demand in demand_list] # flow variables
+    overload_variables = model.addVars(arc_list, obj=overload_penalization) # overload variables : we want to minimize their sum
+
+    # Arc capacity constraints :
+    capacity_constraint_dict = {}
+    for arc in arc_list:
+        flow_on_arc = sum(flow_variables[commodity_index][arc] * demand_list[commodity_index] for commodity_index in range(nb_commodities))
+        capacity_constraint_dict[arc] = model.addConstr(flow_on_arc <= graph[arc[0]][arc[1]] + overload_variables[arc])
+
+    # Flow conservation constraints
+    flow_constraint_dict = {node : [] for node in range(nb_nodes)}
+    for node in range(nb_nodes):
+        for commodity_index, commodity in enumerate(commodity_list):
+            origin, destination, demand = commodity
+            rhs = (node == origin) - (node == destination)
+            constraint = model.addConstr(flow_variables[commodity_index].sum(node,'*') - flow_variables[commodity_index].sum('*',node) == rhs)
+            flow_constraint_dict[node].append(constraint)
+
+    model.update()
+
+    return model, (overload_variables, flow_variables), (capacity_constraint_dict, flow_constraint_dict)
 
 
 if __name__ == "__main__":
