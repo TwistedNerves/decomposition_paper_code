@@ -9,10 +9,10 @@ nb_workers = 10 # for multiprocessing
 duration_before_timeout = 60*60 # time limit given to the algorithms
 
 # List the algorithm lauched on the dataset
-dataset_name, algorithm_list = "high_demand_max_dataset", ["DW-Fenchel iterative", "DW interior"]
+# dataset_name, algorithm_list = "high_demand_max_dataset", ["DW-Fenchel iterative", "DW interior"]
 # dataset_name, algorithm_list = "small_low_demand_max_dataset", ["Fenchel", "Fenchel no preprocessing", "DW-Fenchel", "DW-Fenchel iterative", 'DW-Fenchel no preprocessing', 'DW', "DW momentum", "DW interior"]
 # dataset_name, algorithm_list = "small_high_demand_max_dataset", ["Fenchel", "DW-Fenchel", "DW-Fenchel iterative", 'DW', "DW momentum", "DW interior"]
-# dataset_name, algorithm_list = "low_demand_max_dataset", ["Fenchel", "DW-Fenchel", "DW-Fenchel iterative", 'DW', "DW momentum", "DW interior"]
+dataset_name, algorithm_list = "low_demand_max_dataset", ["Fenchel", "DW-Fenchel", "DW-Fenchel iterative", "DW interior"]
 # dataset_name, algorithm_list = "size_of_capacity_dataset", ["DW-Fenchel iterative", "DW interior"]
 
 # dataset_name, algorithm_list = "small_low_demand_max_dataset", ['DW', "DW momentum", "DW in out", "DW interior", "Fenchel", "DW-Fenchel", "DW-Fenchel iterative"]
