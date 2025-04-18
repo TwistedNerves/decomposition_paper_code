@@ -301,7 +301,9 @@ def in_out_separation_decomposition(demand_list, outter_flow_per_commodity, outt
 
 
         # solving the subproblem of the column generation process
-        pattern, subproblem_objective_value, pattern_overload = penalized_knapsack_optimizer(demand_list, arc_capacity, commodity_dual_value_list, overload_dual_value)
+        pattern, subproblem_objective_value, _ = penalized_knapsack_optimizer(demand_list, arc_capacity, commodity_dual_value_list, overload_dual_value)
+
+        pattern_overload = max(0, sum(np.array(demand_list)[pattern]) - arc_capacity)
 
         reduced_cost = -subproblem_objective_value + convexity_dual_value
         if verbose : print(i, model.ObjVal, reduced_cost, end='          \r')

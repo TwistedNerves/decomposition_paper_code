@@ -8,7 +8,7 @@ from src.decomposition_methods import run_DW_Fenchel_model, knapsack_model_solve
 
 for i in range(1):
     # CHOOSE THE SETTING OF THE INSTANCES
-    size = 50 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
+    size = 30 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
     arc_capacity = 1000 # Capacity of the arcs of the graph
     max_demand = 1000 # Upper bound on the size of the commodities
 
@@ -30,8 +30,8 @@ for i in range(1):
     # tested_algorithms.append("Fenchel")
     # tested_algorithms.append("Fenchel no preprocessing")
     # tested_algorithms.append("DW-Fenchel")
-    # tested_algorithms.append("DW-Fenchel no preprocessing")
     # tested_algorithms.append("DW-Fenchel iterative")
+    # tested_algorithms.append("DW-Fenchel no preprocessing")
 
 
     # Setting parameters for the instance generator
@@ -95,7 +95,6 @@ for i in range(1):
         if algorithm_name == "DW-Fenchel" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, False), path_generation_loop=path_generation_loop, verbose=verbose)
         if algorithm_name == "DW-Fenchel no preprocessing" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, False, False), path_generation_loop=path_generation_loop, verbose=verbose)
         if algorithm_name == "DW-Fenchel iterative" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, True), path_generation_loop=path_generation_loop, verbose=verbose)
-        if algorithm_name == "knapsack cut lowerbound" : knapsack_cut_lowerbound(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, verbose=verbose)
 
         computing_time = time.time() - temp
         print("computing_time = ", computing_time)

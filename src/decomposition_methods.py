@@ -236,7 +236,7 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
             in_out_direction =  {arc : in_dual_var_list_per_arc[arc] - dual_var_list_per_arc[arc] for arc in arc_list}              
             scalar_product = sum(subgradient[arc] @ in_out_direction[arc] for arc in arc_list)
             if scalar_product > 0:
-                in_out_coeff = 0.1 + 0.9 * in_out_coeff
+                in_out_coeff = 0.1+ 0.9 * in_out_coeff
             else:
                 in_out_coeff = max(0, in_out_coeff - 0.1)
 
@@ -616,8 +616,8 @@ def gurobi_with_cuts(graph, commodity_list, possible_paths_per_commodity=None, v
 
     for arc in arc_list:
         for coeff_list, constant_coeff in additional_constraint_dict[arc]:
-            model.addConstr(sum(flow_variables[commodity_index][arc] * coeff_list[commodity_index] for commodity_index in range(nb_commodities)) <= constant_coeff + overload_variables[arc])
-
+            constraint = model.addConstr(sum(flow_variables[commodity_index][arc] * coeff_list[commodity_index] for commodity_index in range(nb_commodities)) <= constant_coeff + overload_variables[arc])
+            constraint.Lazy = -1
 
     model.reset(1)
     model.update()
