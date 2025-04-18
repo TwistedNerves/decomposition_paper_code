@@ -23,11 +23,11 @@ for i in range(1):
     # CHOOSE THE TESTED ALGORITHMS
     tested_algorithms = []
     # tested_algorithms.append("knapsack cut lowerbound")
-    # tested_algorithms.append("DW")
-    # tested_algorithms.append("DW momentum")
+    tested_algorithms.append("DW")
+    tested_algorithms.append("DW momentum")
     # tested_algorithms.append("DW interior")
-    # tested_algorithms.append("DW in out")
-    # tested_algorithms.append("Fenchel")
+    tested_algorithms.append("DW in out")
+    tested_algorithms.append("Fenchel")
     # tested_algorithms.append("Fenchel no preprocessing")
     # tested_algorithms.append("DW-Fenchel")
     # tested_algorithms.append("DW-Fenchel iterative")
@@ -99,4 +99,4 @@ for i in range(1):
         computing_time = time.time() - temp
         print("computing_time = ", computing_time)
     
-    gurobi_with_cuts(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity)
+    # gurobi_with_cuts(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity)
