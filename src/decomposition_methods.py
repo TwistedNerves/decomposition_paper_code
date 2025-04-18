@@ -607,7 +607,7 @@ def gurobi_with_cuts(graph, commodity_list, possible_paths_per_commodity=None, v
             var_dic[arc].VType = 'B'
 
     model.Params.OutputFlag = 1
-    model.Params.MIPFocus = 2
+    model.Params.MIPFocus = 3
     model.update()
     model.optimize()
 
