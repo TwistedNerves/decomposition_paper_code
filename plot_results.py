@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import scipy.stats
 
 
-def mean_confidence_interval_bootstrap(data, confidence=0.95, nb_iterations=1000):
+def mean_confidence_interval_bootstrap(data, confidence=0.95, nb_iterations=100):
     # Computes the mean and confidence interval of the the input data array-like using the bootstraping method
 
     data = 1.0 * np.array(data)
@@ -114,6 +114,7 @@ def plot_dataset_time_bounds(global_path, dataset_name, size_to_consider, abscis
 
     # aggregating the results and ploting the curves
     for algorithm_name in algorithm_list:
+        print(algorithm_name)
         results_temp = {}
         for instance_name in result_dict[algorithm_name]:
             size = int(instance_name.split('_')[2]) # use for the other datasets
@@ -126,7 +127,6 @@ def plot_dataset_time_bounds(global_path, dataset_name, size_to_consider, abscis
         lb_list_list = []
         for instance_name in results_temp:
             results_list = results_temp[instance_name]
-            if algorithm_name == "DW momentum": print(results_list)
             ub_time_list = [(time, ub - DW_bounds[instance_name][1]) for ub, lb, time in results_list]
             ub_time_list.append((10**5, ub_time_list[-1][1]))
             lb_time_list = [(time, lb - DW_bounds[instance_name][1]) for ub, lb, time in results_list]
@@ -144,10 +144,10 @@ def plot_dataset_time_bounds(global_path, dataset_name, size_to_consider, abscis
             lb_list_list[i] = new_lb_list
 
         # plotting the curves
-        # ub_list = [median_and_quantile(x) for x in zip(*ub_list_list)]
-        # lb_list = [median_and_quantile(x) for x in zip(*lb_list_list)]
-        ub_list = [mean_confidence_interval_bootstrap(x) for x in zip(*ub_list_list)]
-        lb_list = [mean_confidence_interval_bootstrap(x) for x in zip(*lb_list_list)]
+        ub_list = [median_and_quantile(x) for x in zip(*ub_list_list)]
+        lb_list = [median_and_quantile(x) for x in zip(*lb_list_list)]
+        # ub_list = [mean_confidence_interval_bootstrap(x) for x in zip(*ub_list_list)]
+        # lb_list = [mean_confidence_interval_bootstrap(x) for x in zip(*lb_list_list)]
         plt.plot(abscisse, [x[0] for x in ub_list], formating[algorithm_name], label=label[algorithm_name], color=colors[algorithm_name], markevery=20)
         plt.fill_between(abscisse, [x[1] for x in ub_list], [x[2] for x in ub_list], alpha=0.25, facecolor=colors[algorithm_name], edgecolor=colors[algorithm_name])
         plt.plot(abscisse, [x[0] for x in lb_list], formating[algorithm_name], color=colors[algorithm_name], markevery=20)
@@ -178,15 +178,15 @@ if __name__ == "__main__":
 
     # list of the algorithms to plot
     algorithm_list = []
-    # algorithm_list.append("Fenchel")
+    algorithm_list.append("Fenchel")
     # algorithm_list.append("Fenchel no preprocessing")
     algorithm_list.append("DW")
     algorithm_list.append("DW momentum")
     algorithm_list.append("DW in out")
     algorithm_list.append("DW interior")
-    # algorithm_list.append("DW-Fenchel")
-    # algorithm_list.append("DW-Fenchel iterative")
+    algorithm_list.append("DW-Fenchel")
+    algorithm_list.append("DW-Fenchel iterative")
     # algorithm_list.append("DW-Fenchel no preprocessing")
 
-    plot_dataset_time_bounds(global_path, dataset_name, 70, abscisse, algorithm_list=algorithm_list, legend_position='lower right', x_label="Computing time (s)", y_label="Deviation from optimal bound")
+    plot_dataset_time_bounds(global_path, dataset_name, 40, abscisse, algorithm_list=algorithm_list, legend_position='lower right', x_label="Computing time (s)", y_label="Deviation from optimal bound")
 
