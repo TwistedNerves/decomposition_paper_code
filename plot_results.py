@@ -179,15 +179,15 @@ if __name__ == "__main__":
 
     # list of the algorithms to plot
     algorithm_list = []
-    algorithm_list.append("Fenchel")
+    # algorithm_list.append("Fenchel")
     # algorithm_list.append("Fenchel no preprocessing")
     algorithm_list.append("DW")
     algorithm_list.append("DW momentum")
     algorithm_list.append("DW in out")
     algorithm_list.append("DW interior")
-    algorithm_list.append("DW-Fenchel")
-    algorithm_list.append("DW-Fenchel iterative")
+    # algorithm_list.append("DW-Fenchel")
+    # algorithm_list.append("DW-Fenchel iterative")
     # algorithm_list.append("DW-Fenchel no preprocessing")
 
-    plot_dataset_time_bounds(global_path, dataset_name, 40, abscisse, algorithm_list=algorithm_list, legend_position='lower right', x_label="Computing time (s)", y_label="Deviation from optimal bound")
+    plot_dataset_time_bounds(global_path, dataset_name, 50, abscisse, algorithm_list=algorithm_list, legend_position='lower right', x_label="Computing time (s)", y_label="Deviation from optimal bound")
 
