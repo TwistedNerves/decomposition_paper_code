@@ -4,7 +4,7 @@ import time
 import gurobipy
 
 import src.knapsacksolver as knapsacksolver # the code must be able to import knapsacksolver.so which is the result of the compilation of the library made by fontanf : https://github.com/fontanf/knapsacksolver.git, place knapsacksolver.so in the main folder
-
+from plot_results import dico_info
 
 
 def compute_all_lifted_coefficients(demand_list, variable_pattern, coeff_list, fixed_pattern, RHS, remaining_arc_capacity):
@@ -22,6 +22,8 @@ def compute_all_lifted_coefficients(demand_list, variable_pattern, coeff_list, f
         remaining_arc_capacity += demand_list[commodity_index]
 
         pre_pattern, lifted_coeff_part = knapsack_solver(lifted_demand_list, remaining_arc_capacity, coeff_list)
+        if not "knapsack_lifting" in dico_info: dico_info["knapsack_lifting"] = 0
+        dico_info["knapsack_lifting"] += 1
 
         pattern = [lifted_commodity_list[index] for index in pre_pattern] + commodity_to_lift_list
         new_pattern_list.append(pattern)
@@ -211,6 +213,12 @@ def in_out_separation_decomposition(demand_list, outter_flow_per_commodity, inne
     penalisation_var_minus = model.addVar(obj=1) # negative part of the penalisation var
     penalisation_var = penalisation_var_plus - penalisation_var_minus
 
+
+    cost_pattern_and_amount_list = compute_approximate_decomposition(demand_list, inner_flow_per_commodity, arc_capacity) + compute_approximate_decomposition(demand_list, outter_flow_per_commodity, arc_capacity)
+    for pattern_overload, pattern, _ in cost_pattern_and_amount_list:
+        if pattern_overload == 0:
+            pattern_and_var_list.append((pattern, model.addVar()))
+
     convexity_constraint = model.addConstr(sum(var for pattern, var in pattern_and_var_list) == 1)
 
     knapsack_constraint_dict = {}
@@ -232,6 +240,8 @@ def in_out_separation_decomposition(demand_list, outter_flow_per_commodity, inne
 
         # solving the subproblem of the column generation process
         pattern, subproblem_objective_value = knapsack_solver(demand_list, arc_capacity, commodity_dual_value_list)
+        if not "knapsack_separation" in dico_info: dico_info["knapsack_separation"] = 0
+        dico_info["knapsack_separation"] += 1
 
         reduced_cost = -subproblem_objective_value + convexity_dual_value
         if verbose : print(i, model.ObjVal, reduced_cost, end='          \r')
@@ -273,12 +283,12 @@ def in_out_separation_decomposition_iterative(demand_list, outter_flow_per_commo
 
     i = 0
     while True:
-        i+=1
         constraint_coeff, pattern_and_amount_list = separation_decomposition_with_preprocessing(demand_list, current_flow_per_commodity, arc_capacity, verbose=0)
         commodity_coeff_list, constant_coeff = constraint_coeff
 
         if sum(commodity_coeff_list * current_flow_per_commodity) <= constant_coeff + 10**-5:
             break
+        i+=1
 
         outter_value = sum(commodity_coeff_list * outter_flow_per_commodity) - constant_coeff
         inner_value = sum(commodity_coeff_list * inner_flow_per_commodity) - constant_coeff
@@ -286,6 +296,9 @@ def in_out_separation_decomposition_iterative(demand_list, outter_flow_per_commo
         current_flow_per_commodity = in_out_convex_coeff * inner_flow_per_commodity + (1 - in_out_convex_coeff) * outter_flow_per_commodity
         old_constraint_coeff = constraint_coeff
 
+
+    if not "nb_cuts_iterative" in dico_info: dico_info["nb_cuts_iterative"] = []
+    dico_info["nb_cuts_iterative"].append(i)
     return old_constraint_coeff, pattern_and_amount_list
 
 
@@ -314,6 +327,9 @@ def in_out_separation_decomposition_with_preprocessing(demand_list, outter_flow_
     variable_outter_flow_per_commodity = [outter_flow_per_commodity[commodity_index] for commodity_index in variable_pattern]
     variable_inner_flow_per_commodity = [inner_flow_per_commodity[commodity_index] for commodity_index in variable_pattern]
     remaining_arc_capacity = arc_capacity - sum(demand_list[commodity_index] for commodity_index in fixed_pattern)
+
+    if not "dimension_ratio" in dico_info: dico_info["dimension_ratio"] = []
+    dico_info["dimension_ratio"].append(len(variable_pattern) / nb_commodities)
 
     # call to the separation/decomposition algorithm
     if iterative_separation:

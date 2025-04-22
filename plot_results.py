@@ -1,9 +1,10 @@
 import random
 import numpy as np
-import time
 import pickle
 import matplotlib.pyplot as plt
-import scipy.stats
+
+dico_info = {}
+dico_patterns = {}
 
 
 def mean_confidence_interval_bootstrap(data, confidence=0.95, nb_iterations=100):

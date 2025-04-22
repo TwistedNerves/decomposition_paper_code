@@ -7,6 +7,7 @@ import gurobipy
 from src.k_shortest_path import k_shortest_path_all_destination
 from src.models import create_arc_path_model, create_knapsack_model, create_arc_node_model
 import src.knapsack_oracles as ko
+from plot_results import dico_info
 
 
 def knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=None, nb_initial_path_created=4, var_delete_proba=0.,
@@ -343,6 +344,9 @@ def run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=Non
                                             inner_model, inner_flow_var_dict, inner_pattern_and_var_per_arc, inner_constraints, outer_constraints, separation_options,
                                             verbose=verbose)
         
+        if not "nb_separated_arc" in dico_info: dico_info["nb_separated_arc"] = []
+        dico_info["nb_separated_arc"].append(nb_separated_arc)
+
         if verbose : print("Subproblem time = ", time.time() - temp)
 
         if path_generation_loop:
@@ -427,6 +431,9 @@ def apply_fenchel_subproblem(graph, demand_list, outer_model, outer_flow_var_dic
             
             new_var = inner_model.addVar(column=column)
             inner_pattern_and_var_per_arc[arc].append((pattern, new_var))
+
+            if not "nb_added_points" in dico_info: dico_info["nb_added_points"] = 0
+            dico_info["nb_added_points"] += 1
 
         t[2] += time.time() - temp
 
