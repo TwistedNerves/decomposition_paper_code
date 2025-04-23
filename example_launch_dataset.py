@@ -17,10 +17,10 @@ dataset_name, algorithm_list = "low_demand_max_dataset", ["Fenchel", "DW-Fenchel
 # dataset_name, algorithm_list = "small_low_demand_max_dataset", ['DW', "DW momentum", "DW in out", "DW interior", "Fenchel", "DW-Fenchel", "DW-Fenchel iterative"]
 launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout)
 
-dataset_name, algorithm_list = "small_low_demand_max_dataset", ['DW', "DW momentum", "DW in out", "DW interior", "Fenchel", "DW-Fenchel", "DW-Fenchel iterative"]
-launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout)
+#dataset_name, algorithm_list = "small_low_demand_max_dataset", ['DW', "DW momentum", "DW in out", "DW interior", "Fenchel", "DW-Fenchel", "DW-Fenchel iterative"]
+#launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout)
 
-dataset_name, algorithm_list = "high_demand_max_dataset", ["DW-Fenchel iterative", "DW interior"]
+dataset_name, algorithm_list = "high_demand_max_dataset", ["Fenchel", "DW-Fenchel", "DW-Fenchel iterative", "DW interior"]
 launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout)
 
 # dataset_name, algorithm_list = "smallest_low_demand_max_dataset_path_gen", ['DW', "DW momentum", "DW in out", "DW interior", "Fenchel", "DW-Fenchel", "DW-Fenchel iterative"]
