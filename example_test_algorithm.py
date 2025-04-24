@@ -8,9 +8,9 @@ from src.decomposition_methods import run_DW_Fenchel_model, knapsack_model_solve
 from plot_results import dico_info
 for i in range(10):
     # CHOOSE THE SETTING OF THE INSTANCES
-    size = 50 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
+    size = 40 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
     arc_capacity = 1000 # Capacity of the arcs of the graph
-    max_demand = 100 # Upper bound on the size of the commodities
+    max_demand = 1000 # Upper bound on the size of the commodities
 
     path_generation_loop = False
 
@@ -22,16 +22,15 @@ for i in range(10):
 
     # CHOOSE THE TESTED ALGORITHMS
     tested_algorithms = []
-    # tested_algorithms.append("knapsack cut lowerbound")
+    # tested_algorithms.append("Fenchel")
+    # tested_algorithms.append("Fenchel no preprocessing")
+    # tested_algorithms.append("DW-Fenchel")
+    # tested_algorithms.append("DW-Fenchel iterative")
+    # tested_algorithms.append("DW-Fenchel no preprocessing")
     # tested_algorithms.append("DW")
     # tested_algorithms.append("DW momentum")
     # tested_algorithms.append("DW interior")
     # tested_algorithms.append("DW in out")
-    # tested_algorithms.append("Fenchel")
-    # tested_algorithms.append("Fenchel no preprocessing")
-    tested_algorithms.append("DW-Fenchel")
-    # tested_algorithms.append("DW-Fenchel iterative")
-    # tested_algorithms.append("DW-Fenchel no preprocessing")
 
 
     # Setting parameters for the instance generator
@@ -99,14 +98,14 @@ for i in range(10):
         computing_time = time.time() - temp
         print("computing_time = ", computing_time)
 
-        nb_iterations = len(dico_info["nb_separated_arc"])
-        print("################")
-        print(sum(dico_info["nb_separated_arc"])/nb_iterations)
-        print(dico_info["nb_added_points"]/nb_iterations)
-        print(dico_info["knapsack_lifting"]/nb_iterations)
-        print(dico_info["knapsack_separation"]/nb_iterations)
-        print(np.mean(dico_info["dimension_ratio"]))
-        # print(sum(dico_info["nb_cuts_iterative"])/nb_iterations)
-        print("################")
+        # nb_iterations = len(dico_info["nb_separated_arc"])
+        # print("################")
+        # print(sum(dico_info["nb_separated_arc"])/nb_iterations)
+        # print(dico_info["nb_added_points"]/nb_iterations)
+        # print(dico_info["knapsack_lifting"]/nb_iterations)
+        # print(dico_info["knapsack_separation"]/nb_iterations)
+        # print(np.mean(dico_info["dimension_ratio"]))
+        # # print(sum(dico_info["nb_cuts_iterative"])/nb_iterations)
+        # print("################")
     
-    # gurobi_with_cuts(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity)
+    gurobi_with_cuts(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity)

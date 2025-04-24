@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import pickle
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 dico_info = {}
 dico_patterns = {}
@@ -145,10 +145,12 @@ def plot_dataset_time_bounds(global_path, dataset_name, size_to_consider, abscis
             lb_list_list[i] = new_lb_list
 
         # plotting the curves
-        ub_list = [median_and_quantile(x) for x in zip(*ub_list_list)]
-        lb_list = [median_and_quantile(x) for x in zip(*lb_list_list)]
-        # ub_list = [mean_confidence_interval_bootstrap(x) for x in zip(*ub_list_list)]
-        # lb_list = [mean_confidence_interval_bootstrap(x) for x in zip(*lb_list_list)]
+        # ub_list = [median_and_quantile(x) for x in zip(*ub_list_list)]
+        # lb_list = [median_and_quantile(x) for x in zip(*lb_list_list)]
+        # print(ub_list)
+        # print(lb_list)
+        ub_list = [mean_confidence_interval_bootstrap(x) for x in zip(*ub_list_list)]
+        lb_list = [mean_confidence_interval_bootstrap(x) for x in zip(*lb_list_list)]
         plt.plot(abscisse, [x[0] for x in ub_list], formating[algorithm_name], label=label[algorithm_name], color=colors[algorithm_name], markevery=20)
         plt.fill_between(abscisse, [x[1] for x in ub_list], [x[2] for x in ub_list], alpha=0.25, facecolor=colors[algorithm_name], edgecolor=colors[algorithm_name])
         plt.plot(abscisse, [x[0] for x in lb_list], formating[algorithm_name], color=colors[algorithm_name], markevery=20)

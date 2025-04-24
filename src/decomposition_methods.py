@@ -264,6 +264,10 @@ def run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=Non
     inner_model.Params.OutputFlag = 0
     inner_model.Params.Threads = 1
 
+    # inner_model.Params.Method = 2
+    # inner_model.Params.BarConvTol = 10**-5 # precision of the interior point method
+    # inner_model.Params.Crossover = 0
+
     # parameters of the Fenchel master model
     outer_model.Params.OutputFlag = 0
     outer_model.Params.Threads = 1
@@ -276,8 +280,14 @@ def run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=Non
         def solve_model(model):
             model.update()
             model.optimize()
-        solve_model(inner_model)
         solve_model(outer_model)
+
+        # inner_model.Params.Crossover = 0
+        # solve_model(inner_model)
+        # dual_var_list_per_arc = {arc : np.array([-constraint.Pi if constraint is not None else 0 for constraint in linking_constraint_dict[arc]]) for arc in arc_list}
+        # inner_model.Params.Crossover = 1
+        solve_model(inner_model)
+
 
         primal_bound = inner_model.ObjVal
         dual_bound = outer_model.ObjVal
@@ -364,11 +374,11 @@ def run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=Non
     outer_model.update()
     outer_model.optimize()
 
-    return {arc : [(coeff_list, constant_coeff) for constraint, coeff_list, constant_coeff in capacity_constraint_dict[arc] if abs(constraint.Pi) > 10**-3] for arc in arc_list}
+    return {arc : [(coeff_list, constant_coeff) for constraint, coeff_list, constant_coeff in capacity_constraint_dict[arc]] for arc in arc_list}
 
 
 def apply_fenchel_subproblem(graph, demand_list, outer_model, outer_flow_var_dict,
-                                    inner_model, inner_flow_var_dict, inner_pattern_and_var_per_arc, inner_constraints, outer_constraints, separation_options, verbose=1):
+                                    inner_model, inner_flow_var_dict, inner_pattern_and_var_per_arc, inner_constraints, outer_constraints, separation_options, dual_var_list_per_arc=None, verbose=1):
     # this method calls the algorithms solving a Fenchel like separation subproblem
     # the cuts and variables (here pattern variables) created are added to the two master problems
     arc_list = [(node, neighbor) for node in range(len(graph)) for neighbor in graph[node]]
@@ -380,8 +390,6 @@ def apply_fenchel_subproblem(graph, demand_list, outer_model, outer_flow_var_dic
     nb_separated_arc = 0
 
     t = [0]*5
-
-    dual_var_list_per_arc = {arc : np.array([-constraint.Pi if constraint is not None else 0 for constraint in linking_constraint_dict[arc]]) for arc in arc_list}
 
 
     for arc in arc_list: # a subproblem is solved for each arc
@@ -414,11 +422,25 @@ def apply_fenchel_subproblem(graph, demand_list, outer_model, outer_flow_var_dic
         temp = time.time()
 
         # if the created cut cuts the solution of the Fenchel master problem it is added to the Fenchel master problem
-        if sum(outer_flow_per_commodity * commodity_coeff_list) > constant_coeff + 10**-7:
+        if sum(outer_flow_per_commodity * commodity_coeff_list) > constant_coeff + 10**-5:
             new_constraint = outer_model.addConstr((sum(outer_flow_var * coefficient for outer_flow_var, coefficient in zip(outer_flow_var_dict[arc], commodity_coeff_list)) <= constant_coeff))
             nb_separated_arc += 1
             outer_constraints[1][arc].append((new_constraint, commodity_coeff_list, constant_coeff))
 
+        # if dual_var_list_per_arc is not None:
+        #     dual_vars = dual_var_list_per_arc[arc]
+        #     dual_vars = np.floor(dual_vars * 10**4)
+        #     new_pattern, subproblem_objective_value = ko.knapsack_solver(demand_list, arc_capacity, dual_var_list_per_arc[arc])
+        #     for pattern, _ in inner_pattern_and_var_per_arc[arc] + pattern_and_amount_list:
+        #         if pattern == new_pattern:
+        #             break
+        #     else:
+        #         pattern_and_amount_list.append((new_pattern, 0))
+
+        #     if sum(outer_flow_per_commodity * dual_var_list_per_arc[arc]) > subproblem_objective_value + 10**-5:
+        #         print("ez")
+        #         new_constraint = outer_model.addConstr((sum(outer_flow_var * coefficient for outer_flow_var, coefficient in zip(outer_flow_var_dict[arc], dual_var_list_per_arc[arc])) <= subproblem_objective_value))
+        #         outer_constraints[1][arc].append((new_constraint, dual_var_list_per_arc[arc], subproblem_objective_value))
 
         # the created patterns are added to the Dantzig-Wolfe master problem
         for pattern, amount in pattern_and_amount_list:
@@ -587,7 +609,7 @@ def gurobi_with_cuts(graph, commodity_list, possible_paths_per_commodity=None, v
 
     for arc in arc_list:
         for coeff_list, constant_coeff in additional_constraint_dict[arc]:
-            constraint = model.addConstr(sum(flow_variables[commodity_index][arc] * coeff_list[commodity_index] for commodity_index in range(nb_commodities)) <= constant_coeff + deviation_variables[arc])
+            constraint = model.addConstr(sum(flow_variables[commodity_index][arc] * coeff_list[commodity_index] for commodity_index in range(nb_commodities)) <= constant_coeff)
             constraint.Lazy = -1
 
     model.reset(1)

@@ -125,7 +125,7 @@ def create_arc_node_model(graph, commodity_list, flow_penalisation=1, deviation_
     for node in range(nb_nodes):
         for commodity_index, commodity in enumerate(commodity_list):
             origin, destination, demand = commodity
-            rhs = ((node == origin) - (node == destination)) * (1 - deviation_variables)
+            rhs = ((node == origin) - (node == destination)) * (1 - deviation_variables[commodity_index])
             constraint = model.addConstr(flow_variables[commodity_index].sum(node,'*') - flow_variables[commodity_index].sum('*',node) == rhs)
             flow_constraint_dict[node].append(constraint)
 
