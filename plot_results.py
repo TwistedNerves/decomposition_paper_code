@@ -1,7 +1,8 @@
 import random
 import numpy as np
 import pickle
-import matplotlib.pyplot as plt
+
+if __name__ == "__main__": import matplotlib.pyplot as plt
 
 dico_info = {}
 dico_patterns = {}
