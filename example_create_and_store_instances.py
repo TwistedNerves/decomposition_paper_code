@@ -7,14 +7,15 @@ from src.instance_mcnf import generate_instance
 
 # SET THE PARAMETERS OF THE DATASET HERE
 nb_repetitions = 10 # number of instances with the same parameters
-nb_unique_exp = 4 # number of different types of instances
+nb_unique_exp = 2 # number of different types of instances
 smaller_commodities = True
 
 # Size of the graph : controls the number of nodes and arcs
 # size_list = [90, 110, 150, 250, 400]
 # size_list = [50, 70, 90, 110]
 # size_list = [20, 30, 40, 50]
-size_list = [50, 70, 90, 110]
+# size_list = [50, 70, 90, 110]
+size_list = [30, 40]
 # size_list = [50]*nb_unique_exp
 
 # Capacity of the arcs of the graph
@@ -37,10 +38,11 @@ global_path = "/home/francois/Desktop/"
 # assert False, "Unassigned global_path : Complete global_path with the path to the main directory"
 
 # Complete name of the directory that will contain the instances
-dataset_name = "low_demand_max_dataset/"
+# dataset_name = "low_demand_max_dataset/"
 # dataset_name = "high_demand_max_dataset/"
 # dataset_name = "small_low_demand_max_dataset/"
 # dataset_name = "small_high_demand_max_dataset/"
+dataset_name = "smallest_low_demand_max_dataset/"
 
 instance_name_list = []
 for graph_type, graph_generator_inputs, demand_generator_inputs in instance_parameter_list:
