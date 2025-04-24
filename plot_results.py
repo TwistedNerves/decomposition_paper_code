@@ -110,8 +110,8 @@ def plot_dataset_time_bounds(global_path, dataset_name, size_to_consider, abscis
             # size = int(instance_name.split('_')[3]) # use for capacity_scaling_dataset
             if size == size_to_consider:
                 results_list = result_dict[algorithm_name][instance_name][0][0]
-                print(results_list[-1])
-                print((results_list[-1][0] - results_list[-1][1])/ results_list[-1][1])
+                # print(results_list[-1])
+                # print((results_list[-1][0] - results_list[-1][1])/ results_list[-1][1])
                 last_ub, last_lb, finish_time = results_list[-1]
                 if instance_name not in DW_bounds or DW_bounds[instance_name][0] > abs(last_ub - last_lb):
                     DW_bounds[instance_name] = (abs(last_ub - last_lb), (last_ub + last_lb)/2)
@@ -170,29 +170,31 @@ if __name__ == "__main__":
     # assert False, "Unassigned global_path : Complete global_path with the path to the main directory"
 
     # choice of the dataset to plot
-    dataset_name = "low_demand_max_dataset"
+    # dataset_name = "low_demand_max_dataset"
     # dataset_name = "small_low_demand_max_dataset"
     # dataset_name = "high_demand_max_dataset"
     # dataset_name = "small_high_demand_max_dataset"
     # dataset_name = "size_of_capacity_dataset"
     # dataset_name = "smallest_low_demand_max_dataset"
-    # dataset_name = "smallest_low_demand_max_dataset_path_gen"
+    dataset_name = "smallest_low_demand_max_dataset_no_flow_pen"
+    # dataset_name = "smallest_low_demand_max_dataset"
 
 
     # abscisse used to resample the curves
     abscisse = list(range(1, 60*60, 10))
+    abscisse = np.arange(1, 60*6, 0.2)
 
     # list of the algorithms to plot
     algorithm_list = []
-    # algorithm_list.append("Fenchel")
+    algorithm_list.append("Fenchel")
     # algorithm_list.append("Fenchel no preprocessing")
     # algorithm_list.append("DW")
     # algorithm_list.append("DW momentum")
     # algorithm_list.append("DW in out")
-    # algorithm_list.append("DW interior")
-    # algorithm_list.append("DW-Fenchel")
+    algorithm_list.append("DW interior")
+    algorithm_list.append("DW-Fenchel")
     algorithm_list.append("DW-Fenchel iterative")
     # algorithm_list.append("DW-Fenchel no preprocessing")
 
-    plot_dataset_time_bounds(global_path, dataset_name, 110, abscisse, algorithm_list=algorithm_list, legend_position='lower right', x_label="Computing time (s)", y_label="Deviation from optimal bound")
+    plot_dataset_time_bounds(global_path, dataset_name, 40, abscisse, algorithm_list=algorithm_list, legend_position='lower right', x_label="Computing time (s)", y_label="Deviation from optimal bound")
 

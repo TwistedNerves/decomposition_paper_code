@@ -15,7 +15,7 @@ smaller_commodities = True
 # size_list = [50, 70, 90, 110]
 # size_list = [20, 30, 40, 50]
 # size_list = [50, 70, 90, 110]
-size_list = [30, 40]
+size_list = [50, 70]
 # size_list = [50]*nb_unique_exp
 
 # Capacity of the arcs of the graph
@@ -42,7 +42,8 @@ global_path = "/home/francois/Desktop/"
 # dataset_name = "high_demand_max_dataset/"
 # dataset_name = "small_low_demand_max_dataset/"
 # dataset_name = "small_high_demand_max_dataset/"
-dataset_name = "smallest_low_demand_max_dataset/"
+# dataset_name = "smallest_low_demand_max_dataset/"
+dataset_name = "smallest_low_demand_max_dataset_no_flow_pen/"
 
 instance_name_list = []
 for graph_type, graph_generator_inputs, demand_generator_inputs in instance_parameter_list:
