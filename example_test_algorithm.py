@@ -8,9 +8,10 @@ from src.decomposition_methods import run_DW_Fenchel_model, knapsack_model_solve
 from plot_results import dico_info
 for i in range(10):
     # CHOOSE THE SETTING OF THE INSTANCES
-    size = 40 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
+    size = 30 # Size of the graph. Note that grid graphs and random connected graphs don't use the size parameter in the same way (see paper). For random connected graphs the size is the number of nodes
     arc_capacity = 1000 # Capacity of the arcs of the graph
-    max_demand = 1000 # Upper bound on the size of the commodities
+    max_demand = 100 # Upper bound on the size of the commodities
+    nb_iterations = 50
 
     path_generation_loop = False
 
@@ -22,10 +23,10 @@ for i in range(10):
 
     # CHOOSE THE TESTED ALGORITHMS
     tested_algorithms = []
-    # tested_algorithms.append("Fenchel")
     # tested_algorithms.append("Fenchel no preprocessing")
-    # tested_algorithms.append("DW-Fenchel")
+    tested_algorithms.append("DW-Fenchel")
     # tested_algorithms.append("DW-Fenchel iterative")
+    # tested_algorithms.append("Fenchel")
     # tested_algorithms.append("DW-Fenchel no preprocessing")
     # tested_algorithms.append("DW")
     # tested_algorithms.append("DW momentum")
@@ -45,7 +46,7 @@ for i in range(10):
 
     # Choice of the seed
     seed = random.randint(0, 10**5)
-    # seed = 45440
+    # seed = 56802
     # seed = i
     print("seed = ", seed)
     random.seed(seed); np.random.seed(seed)
@@ -91,21 +92,21 @@ for i in range(10):
         if algorithm_name == "DW interior" : knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, stabilisation="interior_point", path_generation_loop=path_generation_loop, verbose=verbose)
         if algorithm_name == "Fenchel" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(False, True, False), path_generation_loop=path_generation_loop, verbose=verbose)
         if algorithm_name == "Fenchel no preprocessing" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(False, False, False), path_generation_loop=path_generation_loop, verbose=verbose)
-        if algorithm_name == "DW-Fenchel" : run_DW_Fenchel_model(graph, commodity_list, nb_iterations=100, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, False), path_generation_loop=path_generation_loop, verbose=verbose)
+        if algorithm_name == "DW-Fenchel" : run_DW_Fenchel_model(graph, commodity_list, nb_iterations=nb_iterations, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, False), path_generation_loop=path_generation_loop, verbose=verbose)
         if algorithm_name == "DW-Fenchel no preprocessing" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, False, False), path_generation_loop=path_generation_loop, verbose=verbose)
         if algorithm_name == "DW-Fenchel iterative" : run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity, bounds_and_time_list=return_list, separation_options=(True, True, True), path_generation_loop=path_generation_loop, verbose=verbose)
 
         computing_time = time.time() - temp
         print("computing_time = ", computing_time)
 
-        # nb_iterations = len(dico_info["nb_separated_arc"])
-        # print("################")
-        # print(sum(dico_info["nb_separated_arc"])/nb_iterations)
-        # print(dico_info["nb_added_points"]/nb_iterations)
-        # print(dico_info["knapsack_lifting"]/nb_iterations)
-        # print(dico_info["knapsack_separation"]/nb_iterations)
-        # print(np.mean(dico_info["dimension_ratio"]))
-        # # print(sum(dico_info["nb_cuts_iterative"])/nb_iterations)
-        # print("################")
+        nb_iter = len(dico_info["nb_separated_arc"])
+        print("################")
+        print(sum(dico_info["nb_separated_arc"])/nb_iter)
+        print(dico_info["nb_added_points"]/nb_iter)
+        print(dico_info["knapsack_lifting"]/nb_iter)
+        print(dico_info["knapsack_separation"]/nb_iter)
+        print(np.mean(dico_info["dimension_ratio"]))
+        # print(sum(dico_info["nb_cuts_iterative"])/nb_iter)
+        print("################")
     
-    gurobi_with_cuts(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity)
+    # gurobi_with_cuts(graph, commodity_list, possible_paths_per_commodity=possible_paths_per_commodity)

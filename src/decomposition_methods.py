@@ -264,7 +264,7 @@ def run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=Non
     inner_model.Params.OutputFlag = 0
     inner_model.Params.Threads = 1
 
-    # inner_model.Params.Method = 2
+    inner_model.Params.Method = 2
     # inner_model.Params.BarConvTol = 10**-5 # precision of the interior point method
     # inner_model.Params.Crossover = 0
 
@@ -319,7 +319,6 @@ def run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=Non
             generated_path_list_from_inner_model = generate_paths(commodity_list, inner_convexity_dual_var_list, inner_dual_var_graph_per_commodity, flow_penalisation=flow_penalisation)
             generated_path_list_from_outer_model = generate_paths(commodity_list, outer_convexity_dual_var_list, outer_dual_var_graph_per_commodity, flow_penalisation=flow_penalisation)
 
-            print(sum(path_reduced_cost for _, _, path_reduced_cost in generated_path_list_from_outer_model if path_reduced_cost <0))
             dual_bound += sum(path_reduced_cost for _, _, path_reduced_cost in generated_path_list_from_outer_model)
             new_path_list = generated_path_list_from_inner_model + generated_path_list_from_outer_model
 
