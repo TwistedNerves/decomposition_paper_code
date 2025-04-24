@@ -11,7 +11,7 @@ from plot_results import dico_info
 
 
 def knapsack_model_solver(graph, commodity_list, possible_paths_per_commodity=None, nb_initial_path_created=4, var_delete_proba=0.,
-                            flow_penalisation=1, nb_iterations=10**5, gap_limit=10**-4, bounds_and_time_list=[], stabilisation="interior_point", verbose=1, path_generation_loop=False):
+                            flow_penalisation=0, nb_iterations=10**5, gap_limit=10**-4, bounds_and_time_list=[], stabilisation="interior_point", verbose=1, path_generation_loop=False):
     """
     Creates a knapsack model for the unsplittable flow problem (this model is the result of a Dantzig-Wolfe decompostion applied to the capacity contraints, see src.models.create_knapsack_model) and solves it with column generation
 
@@ -216,7 +216,7 @@ def run_knapsack_model(graph, commodity_list, model, variables, constraints, sta
 
 
 def run_DW_Fenchel_model(graph, commodity_list, possible_paths_per_commodity=None, nb_initial_path_created=4, separation_options=(True, True, True), var_delete_proba=0.3,
-                            bounds_and_time_list=[], nb_iterations=10**5, path_generation_loop=False, flow_penalisation=1, gap_limit=10**-4, verbose=1):
+                            bounds_and_time_list=[], nb_iterations=10**5, path_generation_loop=False, flow_penalisation=0, gap_limit=10**-4, verbose=1):
     """
     This algorithm implements the new decomposition method highlighted by this code
     It uses a Dantzig-Wolfe master problem and a Fenchel master problem

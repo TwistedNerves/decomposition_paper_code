@@ -23,5 +23,8 @@ duration_before_timeout = 60*60 # time limit given to the algorithms
 #dataset_name, algorithm_list = "high_demand_max_dataset", ["Fenchel", "DW-Fenchel", "DW-Fenchel iterative", "DW interior"]
 #launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout)
 
-dataset_name, algorithm_list = "smallest_low_demand_max_dataset", ["DW interior", "Fenchel", "DW-Fenchel", "DW-Fenchel iterative"]
-launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout, path_generation_loop=True)
+# dataset_name, algorithm_list = "smallest_low_demand_max_dataset", ["DW interior", "Fenchel", "DW-Fenchel", "DW-Fenchel iterative"]
+# launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout, path_generation_loop=True)
+
+dataset_name, algorithm_list = "smallest_low_demand_max_dataset_no_flow_pen", ["DW interior", "Fenchel", "DW-Fenchel", "DW-Fenchel iterative"]
+launch_dataset(global_path, dataset_name, algorithm_list, nb_workers, duration_before_timeout)
